@@ -261,7 +261,7 @@ ${message}
 });
 
 // =========================
-// DELETE ACCOUNT
+// DELETE ACCOUNt
 // =========================
 app.delete("/delete-account/:email", (req, res) => {
 
