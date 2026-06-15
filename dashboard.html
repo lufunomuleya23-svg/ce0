@@ -15,7 +15,6 @@ body {
     color: white;
 }
 
-/* HEADER */
 header {
     display: flex;
     justify-content: space-between;
@@ -36,7 +35,6 @@ nav a {
     text-decoration: none;
 }
 
-/* CONTAINER */
 .container {
     max-width: 1100px;
     margin: auto;
@@ -47,14 +45,12 @@ h1 {
     color: gold;
 }
 
-/* GRID */
 .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
 
-/* CARD */
 .card {
     background: #111;
     padding: 20px;
@@ -67,7 +63,6 @@ h1 {
     margin-bottom: 15px;
 }
 
-/* INPUTS */
 input, select, textarea {
     width: 100%;
     padding: 10px;
@@ -83,7 +78,6 @@ textarea {
     resize: none;
 }
 
-/* BUTTON */
 button {
     width: 100%;
     margin-top: 15px;
@@ -99,7 +93,6 @@ button:hover {
     background: #d4af37;
 }
 
-/* BOX */
 .box {
     padding: 10px;
     margin-top: 10px;
@@ -108,7 +101,6 @@ button:hover {
     border-radius: 6px;
 }
 
-/* MOBILE */
 @media(max-width: 768px) {
     .grid {
         grid-template-columns: 1fr;
@@ -122,7 +114,6 @@ button:hover {
 
 <header>
     <div class="logo">GoldWeb Dashboard</div>
-
     <nav>
         <a href="index.html">Home</a>
         <a href="#" onclick="logout()">Logout</a>
@@ -131,21 +122,8 @@ button:hover {
 
 <div class="container">
 
-    <h1 id="welcome">Welcome</h1>
+    <h1 id="welcome"></h1>
     <p id="email"></p>
-
-    <div style="
-    background:#1f2937;
-    border:1px solid gold;
-    padding:12px;
-    border-radius:8px;
-    margin-bottom:20px;
-    color:white;
-    font-size:14px;
-">
-    📧 <b>Email Notice:</b> After booking, a confirmation email will be sent to your inbox.  
-    If you do not see it, please check your <b>Spam / Junk folder</b>.
-</div>
 
     <div class="grid">
 
@@ -159,21 +137,21 @@ button:hover {
             </select>
 
             <input type="date" id="date">
+
             <select id="bookingTime">
-    <option value="09:00">09:00</option>
-    <option value="10:00">10:00</option>
-    <option value="11:00">11:00</option>
-    <option value="12:00">12:00</option>
-    <option value="13:00">13:00</option>
-    <option value="14:00">14:00</option>
-    <option value="15:00">15:00</option>
-    <option value="16:00">16:00</option>
-    <option value="17:00">17:00</option>
-    <option value="18:00">18:00</option>
-</select>
+                <option value="09:00">09:00</option>
+                <option value="10:00">10:00</option>
+                <option value="11:00">11:00</option>
+                <option value="12:00">12:00</option>
+                <option value="13:00">13:00</option>
+                <option value="14:00">14:00</option>
+                <option value="15:00">15:00</option>
+                <option value="16:00">16:00</option>
+                <option value="17:00">17:00</option>
+                <option value="18:00">18:00</option>
+            </select>
 
             <button onclick="book()">Book Now</button>
-
             <p id="bookStatus"></p>
         </div>
 
@@ -183,7 +161,7 @@ button:hover {
             <div id="bookingBox">Loading...</div>
         </div>
 
-        <!-- MESSAGE FORM -->
+        <!-- MESSAGE -->
         <div class="card">
             <h3>Contact Support</h3>
 
@@ -192,35 +170,29 @@ button:hover {
             <textarea id="msgText" placeholder="Your Message"></textarea>
 
             <button onclick="sendMessage()">Send Message</button>
-
             <p id="msgStatus"></p>
         </div>
 
-        <!-- INFO BOX -->
+        <!-- ACCOUNT -->
         <div class="card">
             <h3>Account Info</h3>
+
             <div class="box">
                 Logged in as:<br>
                 <b id="infoName"></b><br>
                 <span id="infoEmail"></span>
             </div>
 
-            <button style="background:red;" onclick="logout()">
-                Logout
+            <button style="background:red;" onclick="logout()">Logout</button>
+
+            <button style="background:red;" onclick="deleteAccount()">
+                Delete My Account
             </button>
-            <div class="card">
-    <h3>Danger Zone</h3>
 
-    <button style="background:red;" onclick="deleteAccount()">
-        Delete My Account
-    </button>
-
-    <p id="deleteStatus"></p>
-</div>
+            <p id="deleteStatus"></p>
         </div>
 
     </div>
-
 </div>
 
 <script>
@@ -234,23 +206,20 @@ if (!email) {
 
 document.getElementById("welcome").innerText = "Welcome back, " + name;
 document.getElementById("email").innerText = email;
-
 document.getElementById("infoName").innerText = name;
 document.getElementById("infoEmail").innerText = email;
 
 loadBooking();
 
-/* =========================
-   BOOKING
-========================= */
+/* ================= BOOK ================= */
 async function book() {
 
     const res = await fetch("https://ce0-2.onrender.com/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            name: localStorage.getItem("userName"),
-            email: localStorage.getItem("userEmail"),
+            name,
+            email,
             service: document.getElementById("service").value,
             bookingDate: document.getElementById("date").value,
             bookingTime: document.getElementById("bookingTime").value
@@ -258,16 +227,14 @@ async function book() {
     });
 
     document.getElementById("bookStatus").innerText = await res.text();
-
     loadBooking();
 }
 
-/* =========================
-   LOAD BOOKING
-========================= */
+/* ================= LOAD BOOKING ================= */
 async function loadBooking() {
 
-    const res = await fetch(`https://ce0-2.onrender.com/book/${email}`);
+    const res = await fetch(`https://ce0-2.onrender.com/booking/${email}`);
+
     const data = await res.json();
 
     const box = document.getElementById("bookingBox");
@@ -280,14 +247,12 @@ async function loadBooking() {
     box.innerHTML = `
         <div class="box">
             <b>${data.service}</b><br>
-            ${data.bookingDate}
+            ${data.bookingDate} - ${data.bookingTime}
         </div>
     `;
 }
 
-/* =========================
-   SEND MESSAGE (EMAIL)
-========================= */
+/* ================= MESSAGE ================= */
 async function sendMessage() {
 
     const res = await fetch("https://ce0-2.onrender.com/message", {
@@ -300,54 +265,34 @@ async function sendMessage() {
         })
     });
 
-    const text = await res.text();
-
-    document.getElementById("msgStatus").innerText = text;
-
-    if (res.ok) {
-        document.getElementById("msgName").value = "";
-        document.getElementById("msgEmail").value = "";
-        document.getElementById("msgText").value = "";
-    }
+    document.getElementById("msgStatus").innerText = await res.text();
 }
 
-/* =========================
-   LOGOUT
-========================= */
-function logout() {
-    localStorage.clear();
-    window.location.href = "login.html";
-}
-
+/* ================= DELETE ================= */
 async function deleteAccount() {
 
-    const confirmDelete = confirm("Are you sure? This cannot be undone.");
+    const email = localStorage.getItem("userEmail");
 
-    if (!confirmDelete) return;
-
-    const res = await fetch("https://ce0-2.onrender.com/delete-account", {
-        method: "DELETE",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            email: localStorage.getItem("userEmail")
-        })
+    const res = await fetch(`https://ce0-2.onrender.com/delete-account/${email}`, {
+        method: "DELETE"
     });
 
-    const text = await res.text();
-
-    document.getElementById("deleteStatus").innerText = text;
+    document.getElementById("deleteStatus").innerText = await res.text();
 
     if (res.ok) {
         localStorage.clear();
-        setTimeout(() => {
-            window.location.href = "login.html";
-        }, 1000);
+        window.location.href = "login.html";
     }
+}
+
+/* ================= LOGOUT ================= */
+function logout() {
+    localStorage.clear();
+    window.location.href = "login.html";
 }
 
 </script>
 
 </body>
 </html>
+
