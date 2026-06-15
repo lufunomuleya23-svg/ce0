@@ -279,11 +279,17 @@ app.get("/reset-admin", async (req, res) => {
     const hash = await bcrypt.hash("GoldWeb@2026Secure!", 12);
 
     db.run(
-        "UPDATE admin SET password = ? WHERE username = ?",
-        [hash, "admin"],
-        (err) => {
-            if (err) return res.send("Failed");
-            res.send("Admin password reset successful");
+        `INSERT INTO admin (username, password)
+         VALUES (?, ?)
+         ON CONFLICT(username) DO UPDATE SET password = excluded.password`,
+        ["admin", hash],
+        function (err) {
+            if (err) {
+                console.log(err.message);
+                return res.send("Reset failed");
+            }
+
+            res.send("Admin created/updated successfully");
         }
     );
 });
