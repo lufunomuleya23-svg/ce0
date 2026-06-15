@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luxury Web Agency</title>
+
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="logo">GoldWeb Studio</div>
+
+  <div class="menu-toggle" onclick="toggleMenu()">☰</div>
+
+  <nav id="nav">
+    <a href="#home">Home</a>
+    <a href="#services">Services</a>
+    <a href="register.html">Register</a>
+    <a href="login.html">Login</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-text">
+    <h1>We Build Premium Websites That Grow Your Business</h1>
+    <p>Book a 44-minute Zoom consultation and let's plan your website together.</p>
+
+    <a href="login.html" class="btn">Book Consultation</a>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="section" id="services">
+  <h2>Our Services</h2>
+
+  <div class="grid">
+
+    <div class="card">
+      <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d" alt="Business Website">
+      <h3>Business Websites</h3>
+      <p>Professional websites for companies and brands.</p>
+    </div>
+
+    <div class="card">
+      <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71" alt="E-commerce">
+      <h3>E-Commerce</h3>
+      <p>Online stores with payments and product systems.</p>
+    </div>
+
+    <div class="card">
+      <img src="https://images.unsplash.com/photo-1553877522-43269d4ea984" alt="Redesign">
+      <h3>Website Redesign</h3>
+      <p>Upgrade your old website into something modern.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section">
+  <h2>Ready to Build Your Website?</h2>
+  <p>Book your Zoom consultation and let’s start your project.</p>
+  <a href="login.html" class="btn">Book Now</a>
+</section>
+
+<section style="background:#0b0b0f; padding:50px 20px; border-top:1px solid #222; color:white; text-align:center;">
+
+    <h2 style="color:gold; margin-bottom:10px;">Have an Enquiry?</h2>
+
+    <p style="color:#aaa; max-width:600px; margin:auto;">
+        Need a website, booking system, or custom software solution?
+        Send us a message and we’ll get back to you as soon as possible.
+    </p>
+
+    <div style="margin-top:25px;">
+
+        <a href="mailto:lufunomuleya23@gmail.com"
+           style="display:inline-block; background:gold; color:black; padding:12px 25px; font-weight:bold; text-decoration:none; border-radius:6px; margin:5px;">
+            📩 Send an Enquiry
+        </a>
+
+        <a href="https://wa.me/27787002064"
+           style="display:inline-block; background:#25D366; color:white; padding:12px 25px; font-weight:bold; text-decoration:none; border-radius:6px; margin:5px;">
+            💬 WhatsApp Us
+        </a>
+
+    </div>
+
+    <p style="margin-top:20px; color:#666; font-size:13px;">
+        We usually respond within 24 hours.
+    </p>
+
+</section>
+
+<footer>
+  <p>© 2026 GoldWeb Studio. All rights reserved.</p>
+</footer>
+
+<script src="app.js"></script>
+
+<script>
+function toggleMenu() {
+  const nav = document.getElementById("nav");
+  nav.classList.toggle("active");
+}
+</script>
+
+</body>
+</html>

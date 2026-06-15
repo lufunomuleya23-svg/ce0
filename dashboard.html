@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Dashboard</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0b0b0f;
+    color: white;
+}
+
+/* HEADER */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px;
+    background: #000;
+    border-bottom: 1px solid gold;
+}
+
+.logo {
+    color: gold;
+    font-weight: bold;
+}
+
+nav a {
+    color: white;
+    margin-left: 15px;
+    text-decoration: none;
+}
+
+/* CONTAINER */
+.container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 25px;
+}
+
+h1 {
+    color: gold;
+}
+
+/* GRID */
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* CARD */
+.card {
+    background: #111;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #222;
+}
+
+.card h3 {
+    color: gold;
+    margin-bottom: 15px;
+}
+
+/* INPUTS */
+input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background: #0b0b0f;
+    border: 1px solid #333;
+    color: white;
+    border-radius: 6px;
+}
+
+textarea {
+    height: 100px;
+    resize: none;
+}
+
+/* BUTTON */
+button {
+    width: 100%;
+    margin-top: 15px;
+    padding: 10px;
+    background: gold;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+button:hover {
+    background: #d4af37;
+}
+
+/* BOX */
+.box {
+    padding: 10px;
+    margin-top: 10px;
+    background: #0b0b0f;
+    border: 1px solid #222;
+    border-radius: 6px;
+}
+
+/* MOBILE */
+@media(max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+</head>
+
+<body>
+
+<header>
+    <div class="logo">GoldWeb Dashboard</div>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="#" onclick="logout()">Logout</a>
+    </nav>
+</header>
+
+<div class="container">
+
+    <h1 id="welcome">Welcome</h1>
+    <p id="email"></p>
+
+    <div style="
+    background:#1f2937;
+    border:1px solid gold;
+    padding:12px;
+    border-radius:8px;
+    margin-bottom:20px;
+    color:white;
+    font-size:14px;
+">
+    📧 <b>Email Notice:</b> After booking, a confirmation email will be sent to your inbox.  
+    If you do not see it, please check your <b>Spam / Junk folder</b>.
+</div>
+
+    <div class="grid">
+
+        <!-- BOOKING -->
+        <div class="card">
+            <h3>Book Service</h3>
+
+            <select id="service">
+                <option>Web Development</option>
+                <option>Zoom Consultation</option>
+            </select>
+
+            <input type="date" id="date">
+            <select id="bookingTime">
+    <option value="09:00">09:00</option>
+    <option value="10:00">10:00</option>
+    <option value="11:00">11:00</option>
+    <option value="12:00">12:00</option>
+    <option value="13:00">13:00</option>
+    <option value="14:00">14:00</option>
+    <option value="15:00">15:00</option>
+    <option value="16:00">16:00</option>
+    <option value="17:00">17:00</option>
+    <option value="18:00">18:00</option>
+</select>
+
+            <button onclick="book()">Book Now</button>
+
+            <p id="bookStatus"></p>
+        </div>
+
+        <!-- BOOKING DISPLAY -->
+        <div class="card">
+            <h3>My Booking</h3>
+            <div id="bookingBox">Loading...</div>
+        </div>
+
+        <!-- MESSAGE FORM -->
+        <div class="card">
+            <h3>Contact Support</h3>
+
+            <input id="msgName" placeholder="Your Name">
+            <input id="msgEmail" placeholder="Your Email">
+            <textarea id="msgText" placeholder="Your Message"></textarea>
+
+            <button onclick="sendMessage()">Send Message</button>
+
+            <p id="msgStatus"></p>
+        </div>
+
+        <!-- INFO BOX -->
+        <div class="card">
+            <h3>Account Info</h3>
+            <div class="box">
+                Logged in as:<br>
+                <b id="infoName"></b><br>
+                <span id="infoEmail"></span>
+            </div>
+
+            <button style="background:red;" onclick="logout()">
+                Logout
+            </button>
+            <div class="card">
+    <h3>Danger Zone</h3>
+
+    <button style="background:red;" onclick="deleteAccount()">
+        Delete My Account
+    </button>
+
+    <p id="deleteStatus"></p>
+</div>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+const email = localStorage.getItem("userEmail");
+const name = localStorage.getItem("userName");
+
+if (!email) {
+    window.location.href = "login.html";
+}
+
+document.getElementById("welcome").innerText = "Welcome back, " + name;
+document.getElementById("email").innerText = email;
+
+document.getElementById("infoName").innerText = name;
+document.getElementById("infoEmail").innerText = email;
+
+loadBooking();
+
+/* =========================
+   BOOKING
+========================= */
+async function book() {
+
+    const res = await fetch("http://localhost:3000/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            email,
+            name: localStorage.getItem("userName"),
+            email: localStorage.getItem("userEmail"),
+            service: document.getElementById("service").value,
+            bookingDate: document.getElementById("date").value,
+            bookingTime: document.getElementById("bookingTime").value
+        })
+    });
+
+    document.getElementById("bookStatus").innerText = await res.text();
+
+    loadBooking();
+}
+
+/* =========================
+   LOAD BOOKING
+========================= */
+async function loadBooking() {
+
+    const res = await fetch("http://localhost:3000/booking/" + email);
+    const data = await res.json();
+
+    const box = document.getElementById("bookingBox");
+
+    if (!data) {
+        box.innerHTML = "No booking yet.";
+        return;
+    }
+
+    box.innerHTML = `
+        <div class="box">
+            <b>${data.service}</b><br>
+            ${data.bookingDate}
+        </div>
+    `;
+}
+
+/* =========================
+   SEND MESSAGE (EMAIL)
+========================= */
+async function sendMessage() {
+
+    const res = await fetch("http://localhost:3000/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name: document.getElementById("msgName").value,
+            email: document.getElementById("msgEmail").value,
+            message: document.getElementById("msgText").value
+        })
+    });
+
+    const text = await res.text();
+
+    document.getElementById("msgStatus").innerText = text;
+
+    if (res.ok) {
+        document.getElementById("msgName").value = "";
+        document.getElementById("msgEmail").value = "";
+        document.getElementById("msgText").value = "";
+    }
+}
+
+/* =========================
+   LOGOUT
+========================= */
+function logout() {
+    localStorage.clear();
+    window.location.href = "login.html";
+}
+
+async function deleteAccount() {
+
+    const confirmDelete = confirm("Are you sure? This cannot be undone.");
+
+    if (!confirmDelete) return;
+
+    const res = await fetch("http://localhost:3000/delete-account", {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            email: localStorage.getItem("userEmail")
+        })
+    });
+
+    const text = await res.text();
+
+    document.getElementById("deleteStatus").innerText = text;
+
+    if (res.ok) {
+        localStorage.clear();
+        setTimeout(() => {
+            window.location.href = "login.html";
+        }, 1000);
+    }
+}
+
+</script>
+
+</body>
+</html>

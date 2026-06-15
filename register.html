@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register</title>
+
+<style>
+body {
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.box {
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 10px;
+    width: 320px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 5px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+a {
+    text-decoration: none;
+}
+
+#msg {
+    text-align: center;
+    margin-top: 10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="box">
+
+    <h2>Register</h2>
+
+    <input id="name" placeholder="Name">
+    <input id="email" placeholder="Email">
+    <div class="password-box">
+    <input id="password" type="password" placeholder="Password">
+    <span onclick="togglePassword()" style="cursor:pointer; color:gold;">👁</span>
+</div>
+
+    <button onclick="register()">Register</button>
+
+    <p id="msg"></p>
+
+</div>
+
+<!-- link below form -->
+<div style="position:absolute; bottom:40px; text-align:center; width:100%;">
+    <span style="color:#aaa;">Already have an account?</span>
+    <a href="login.html" style="color:gold; font-weight:bold;">
+        Sign in
+    </a>
+</div>
+
+<script>
+async function register() {
+
+    const res = await fetch("http://localhost:3000/register", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            name: document.getElementById("name").value,
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value
+        })
+    });
+
+    const text = await res.text();
+    const msg = document.getElementById("msg");
+
+    if (res.ok) {
+
+        msg.innerHTML = `
+            <p style="color:lime; font-weight:bold;">
+                ✔ Account created successfully! Redirecting...
+            </p>
+        `;
+
+        setTimeout(() => {
+            window.location.href = "login.html";
+        }, 1000);
+
+    } else {
+
+        msg.innerHTML = `
+            <p style="color:red; font-weight:bold;">
+                ❌ ${text}
+            </p>
+        `;
+    }
+}
+
+function togglePassword() {
+    const input = document.getElementById("password");
+
+    if (input.type === "password") {
+        input.type = "text";
+    } else {
+        input.type = "password";
+    }
+}
+</script>
+
+</body>
+</html>

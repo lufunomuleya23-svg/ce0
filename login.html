@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="center">
+  <div class="box">
+    <h2>Login</h2>
+
+    <input id="email" placeholder="Email">
+    <div class="password-box">
+    <input id="password" type="password" placeholder="Password">
+    <span onclick="togglePassword()">👁</span>
+</div>
+
+    <button onclick="login()">Login</button>
+
+    <p style="text-align:center; margin-top:10px;">
+    <a href="#" onclick="forgotPassword()" style="color:gold;">
+        Forgot Password?
+    </a>
+</p>
+
+<p id="forgotMsg"></p>
+
+    <p style="margin-top:15px; text-align:center; color:#aaa;">
+    Don't have an account?
+    <a href="register.html" style="color:gold; text-decoration:none;">
+        Register here
+    </a>
+</p>
+
+    <p id="msg"></p>
+  </div>
+</div>
+
+<script>
+async function login() {
+
+    const res = await fetch("http://localhost:3000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value
+        })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+
+        localStorage.setItem("userName", data.name);
+        localStorage.setItem("userEmail", data.email);
+
+        window.location.href = "dashboard.html";
+
+    } else {
+        document.getElementById("msg").innerText =
+            data.message || "Login failed";
+    }
+}
+
+function togglePassword() {
+    const input = document.getElementById("password");
+
+    if (input.type === "password") {
+        input.type = "text";
+    } else {
+        input.type = "password";
+    }
+}
+
+async function forgotPassword() {
+
+    const email = prompt("Enter your email:");
+
+    if (!email) return;
+
+    const res = await fetch("http://localhost:3000/forgot-password", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email })
+    });
+
+    const text = await res.text();
+
+    document.getElementById("forgotMsg").innerText = text;
+}
+
+</script>
+
+</body>
+</html>
