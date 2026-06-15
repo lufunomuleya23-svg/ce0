@@ -3,38 +3,35 @@ const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const JWT_SECRET = "super_secret_key_change_this";
+// =========================
+// ENV VARIABLES
+// =========================
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 
 // =========================
-// EMAIL SETUP
+// RESEND EMAIL FUNCTION
 // =========================
-const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-        user: "lufunomuleya23@gmail.com",
-        pass: "tnpz bqzw vbrp myhu"
-    }
-});
-
-// SAFE EMAIL SENDER (IMPORTANT FIX)
-const sendMailSafe = (mailOptions, label) => {
+const sendEmail = async (to, subject, text) => {
     try {
-        transporter.sendMail(mailOptions, (err) => {
-            if (err) {
-                console.log(`${label} email failed:`, err.message);
-            } else {
-                console.log(`${label} email sent`);
-            }
+        await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                from: "GoldWeb <onboarding@resend.dev>",
+                to,
+                subject,
+                text
+            })
         });
-    } catch (e) {
-        console.log(`${label} crash:`, e.message);
+    } catch (err) {
+        console.log("Email error:", err.message);
     }
 };
 
@@ -89,25 +86,6 @@ db.run(`CREATE TABLE IF NOT EXISTS admin (
     password TEXT
 )`);
 
-// Default admin
-db.get("SELECT * FROM admin WHERE username = ?", ["admin"], async (err, row) => {
-    if (!row) {
-        const hash = await bcrypt.hash("GoldWeb@2026Secure!", 12);
-
-        db.run(
-            "INSERT INTO admin (username, password) VALUES (?, ?)",
-            ["admin", hash]
-        );
-    }
-});
-
-// =========================
-// HOME
-// =========================
-app.get("/", (req, res) => {
-    res.send("Server running");
-});
-
 // =========================
 // REGISTER
 // =========================
@@ -120,8 +98,8 @@ app.post("/register", async (req, res) => {
         "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
         [name, email, hash],
         (err) => {
-            if (err) return res.status(400).json({ message: "Email exists" });
-            res.json({ message: "User registered" });
+            if (err) return res.status(400).json({ message: "Email already exists" });
+            res.json({ message: "User registered successfully" });
         }
     );
 });
@@ -141,9 +119,16 @@ app.post("/login", (req, res) => {
 
         if (!match) return res.status(401).json({ message: "Invalid login" });
 
+        const token = jwt.sign(
+            { email: user.email },
+            JWT_SECRET,
+            { expiresIn: "2h" }
+        );
+
         res.json({
             name: user.name,
-            email: user.email
+            email: user.email,
+            token
         });
     });
 });
@@ -167,26 +152,60 @@ app.post("/book", (req, res) => {
             db.run(
                 "INSERT INTO bookings (name, email, service, bookingDate, bookingTime) VALUES (?, ?, ?, ?, ?)",
                 [name, email, service, bookingDate, bookingTime],
-                (err) => {
+                async (err) => {
 
                     if (err) return res.status(500).send("Booking failed");
 
-                    const adminMail = {
-                        from: "GoldWeb",
-                        to: "lufunomuleya23@gmail.com",
-                        subject: "New Booking",
-                        text: `Booking: ${email} - ${service} - ${bookingDate} ${bookingTime}`
-                    };
+                    // =========================
+                    // USER EMAIL (FULL)
+                    // =========================
+                    await sendEmail(
+                        email,
+                        "✅ Booking Confirmed - GoldWeb Studio",
+                        `
+Hello ${name},
 
-                    const userMail = {
-                        from: "GoldWeb",
-                        to: email,
-                        subject: "Booking Confirmed",
-                        text: `Your booking is confirmed for ${service} on ${bookingDate} at ${bookingTime}`
-                    };
+Thank you for booking with GoldWeb Studio.
 
-                    sendMailSafe(adminMail, "Admin");
-                    sendMailSafe(userMail, "User");
+We are pleased to confirm your booking.
+
+--------------------------------------------------
+BOOKING DETAILS
+--------------------------------------------------
+Service: ${service}
+Date: ${bookingDate}
+Time: ${bookingTime}
+--------------------------------------------------
+
+NEXT STEPS
+--------------------------------------------------
+• Your booking will be reviewed
+• A Zoom link will be sent before the session
+• Please be available at the scheduled time
+
+If you do not see this email, check Spam/Junk folder.
+
+Kind regards,
+GoldWeb Studio
+                        `
+                    );
+
+                    // =========================
+                    // ADMIN EMAIL
+                    // =========================
+                    await sendEmail(
+                        "lufunomuleya23@gmail.com",
+                        "📅 New Booking Received",
+                        `
+New Booking:
+
+Name: ${name}
+Email: ${email}
+Service: ${service}
+Date: ${bookingDate}
+Time: ${bookingTime}
+                        `
+                    );
 
                     res.send("Booking successful");
                 }
@@ -222,14 +241,18 @@ app.post("/message", (req, res) => {
         [name, email, message]
     );
 
-    const mailOptions = {
-        from: "GoldWeb",
-        to: "lufunomuleya23@gmail.com",
-        subject: `Message from ${name}`,
-        text: message
-    };
+    sendEmail(
+        "lufunomuleya23@gmail.com",
+        `New Message from ${name}`,
+        `
+Name: ${name}
+Email: ${email}
 
-    sendMailSafe(mailOptions, "Message");
+Message:
+${message}
+        `
+    );
+
     res.send("Message sent");
 });
 
@@ -253,9 +276,5 @@ app.delete("/delete-account/:email", (req, res) => {
 // START SERVER
 // =========================
 app.listen(PORT, () => {
-    console.log(`Running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
-
-
-
-              
