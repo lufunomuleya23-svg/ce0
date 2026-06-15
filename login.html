@@ -43,7 +43,7 @@
 <script>
 async function login() {
 
-    const res = await fetch("http://localhost:3000/login", {
+    const res = await fetch(" https://ce0-2.onrender.com/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -83,7 +83,7 @@ async function forgotPassword() {
 
     if (!email) return;
 
-    const res = await fetch("http://localhost:3000/forgot-password", {
+    const res = await fetch(" https://ce0-2.onrender.com/forgot-password", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
