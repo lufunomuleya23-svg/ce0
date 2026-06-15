@@ -149,32 +149,23 @@ if (token) {
 // 🔥 FIX: attach click safely (THIS fixes your "button does nothing")
 document.getElementById("loginBtn").addEventListener("click", loginAdmin);
 
-// LOGIN
-async function loginAdmin() {
-
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
+// LOGin
+    async function loginAdmin() {
 
     const res = await fetch("https://ce0-2.onrender.com/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+        })
     });
 
-    const data = await res.json();
+    const text = await res.text();
 
-    if (!res.ok) {
-        alert(data.message || "Invalid login");
-        return;
-    }
+    console.log("RAW RESPONSE:", text);
 
-    token = data.token;
-    localStorage.setItem("adminToken", token);
-
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("adminPanel").style.display = "block";
-
-    loadData();
+    alert(text);
 }
 
 // LOAD DATA
