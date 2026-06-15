@@ -300,6 +300,38 @@ app.get("/check-admin", (req, res) => {
     });
 });
 
+app.post("/admin/login", (req, res) => {
+
+    const { username, password } = req.body;
+
+    db.get(
+        "SELECT * FROM admin WHERE username = ?",
+        [username],
+        async (err, admin) => {
+
+            if (err) return res.status(500).json({ message: "Server error" });
+
+            if (!admin) {
+                return res.status(401).json({ message: "Invalid admin" });
+            }
+
+            const match = await bcrypt.compare(password, admin.password);
+
+            if (!match) {
+                return res.status(401).json({ message: "Invalid admin" });
+            }
+
+            const token = jwt.sign(
+                { username: admin.username },
+                JWT_SECRET,
+                { expiresIn: "2h" }
+            );
+
+            res.json({ token });
+        }
+    );
+});
+
 // =========================
 // START SERVER
 // =========================
