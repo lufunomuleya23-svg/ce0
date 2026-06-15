@@ -173,7 +173,7 @@ async function loginAdmin() {
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
 
-    const res = await fetch("http://localhost:3000/admin/login", {
+    const res = await fetch("https://ce0-2.onrender.com/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
@@ -209,7 +209,7 @@ function loadData() {
 // =========================
 async function loadUsers() {
 
-    const res = await fetch("http://localhost:3000/admin/users", {
+    const res = await fetch("https://ce0-2.onrender.com/admin/users", {
         headers: { Authorization: token }
     });
 
@@ -229,7 +229,7 @@ async function loadUsers() {
 // =========================
 async function loadBookings() {
 
-    const res = await fetch("http://localhost:3000/admin/bookings", {
+    const res = await fetch("https://ce0-2.onrender.com/admin/bookings", {
         headers: { Authorization: token }
     });
 
@@ -274,7 +274,7 @@ async function updateBooking(id) {
     const status = document.getElementById("status-" + id).value;
     const adminNotes = document.getElementById("note-" + id).value;
 
-    const res = await fetch("http://localhost:3000/admin/update-booking", {
+    const res = await fetch("https://ce0-2.onrender.com/admin/update-booking", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -300,7 +300,7 @@ async function updateBooking(id) {
 // =========================
 async function loadMessages() {
 
-    const res = await fetch("http://localhost:3000/admin/messages", {
+    const res = await fetch("https://ce0-2.onrender.com/admin/messages", {
         headers: { Authorization: token }
     });
 
