@@ -276,32 +276,6 @@ app.delete("/delete-account/:email", (req, res) => {
     });
 });
 
-app.get("/create-admin", async (req, res) => {
-
-    const username = "admin";
-    const password = "GoldWeb@2026Secure!";
-
-    const hash = await bcrypt.hash(password, 12);
-
-    db.run(
-        "DELETE FROM admin WHERE username = ?",
-        [username],
-        (err) => {
-
-            if (err) return res.send("Delete failed");
-
-            db.run(
-                "INSERT INTO admin (username, password) VALUES (?, ?)",
-                [username, hash],
-                (err2) => {
-                    if (err2) return res.send("Create failed");
-                    res.send("Admin recreated successfully");
-                }
-            );
-        }
-    );
-});
-
 app.post("/admin/login", (req, res) => {
 
     const { username, password } = req.body;
