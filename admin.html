@@ -97,12 +97,14 @@ button:hover {
 
 <!-- LOGIN -->
 <div class="login-box" id="loginBox">
+
     <h2 style="color:gold;">Admin Login</h2>
 
     <input id="username" placeholder="Username"><br><br>
     <input id="password" type="password" placeholder="Password"><br><br>
 
-    <button onclick="loginAdmin()">Login</button>
+    <button id="loginBtn">Login</button>
+
 </div>
 
 <!-- DASHBOARD -->
@@ -144,7 +146,10 @@ if (token) {
     loadData();
 }
 
-// LOGIN FUNCTION
+// 🔥 FIX: attach click safely (THIS fixes your "button does nothing")
+document.getElementById("loginBtn").addEventListener("click", loginAdmin);
+
+// LOGIN
 async function loginAdmin() {
 
     const username = document.getElementById("username").value;
@@ -160,11 +165,6 @@ async function loginAdmin() {
 
     if (!res.ok) {
         alert(data.message || "Invalid login");
-        return;
-    }
-
-    if (!data.token) {
-        alert("Login failed: no token received");
         return;
     }
 
@@ -215,40 +215,8 @@ async function loadBookings() {
                 <b>${b.service}</b><br>
                 ${b.email}<br>
                 ${b.bookingDate} ${b.bookingTime || ""}
-                <hr>
-
-                <label>Status:</label>
-                <select id="status-${b.id}">
-                    <option ${b.status === "pending" ? "selected" : ""}>pending</option>
-                    <option ${b.status === "in-progress" ? "selected" : ""}>in-progress</option>
-                    <option ${b.status === "done" ? "selected" : ""}>done</option>
-                    <option ${b.status === "paid" ? "selected" : ""}>paid</option>
-                </select>
-
-                <textarea id="note-${b.id}">${b.adminNotes || ""}</textarea>
-
-                <button onclick="updateBooking(${b.id})">Update</button>
             </div>
         `).join("");
-}
-
-// UPDATE BOOKING
-async function updateBooking(id) {
-
-    const status = document.getElementById("status-" + id).value;
-    const adminNotes = document.getElementById("note-" + id).value;
-
-    await fetch("https://ce0-2.onrender.com/admin/update-booking", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": token
-        },
-        body: JSON.stringify({ id, status, adminNotes })
-    });
-
-    alert("Updated");
-    loadBookings();
 }
 
 // MESSAGES
