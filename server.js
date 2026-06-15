@@ -295,7 +295,6 @@ app.get("/reset-admin", async (req, res) => {
 
 app.get("/check-admin", (req, res) => {
     db.all("SELECT * FROM admin", [], (err, rows) => {
-        if (err) return res.send(err.message);
         res.json(rows);
     });
 });
