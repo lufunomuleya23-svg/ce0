@@ -276,27 +276,18 @@ app.delete("/delete-account/:email", (req, res) => {
     });
 });
 
-app.get("/reset-admin", async (req, res) => {
+app.get("/create-admin", async (req, res) => {
+
     const hash = await bcrypt.hash("GoldWeb@2026Secure!", 12);
 
     db.run(
-        "INSERT INTO admin (username, password) VALUES (?, ?)",
+        "INSERT OR IGNORE INTO admin (username, password) VALUES (?, ?)",
         ["admin", hash],
         (err) => {
-            if (err) {
-                console.log(err.message);
-                return res.send("Failed to create admin");
-            }
-
+            if (err) return res.send("Failed to create admin");
             res.send("Admin created successfully");
         }
     );
-});
-
-app.get("/check-admin", (req, res) => {
-    db.all("SELECT * FROM admin", [], (err, rows) => {
-        res.json(rows);
-    });
 });
 
 app.post("/admin/login", (req, res) => {
