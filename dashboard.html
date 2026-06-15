@@ -245,11 +245,10 @@ loadBooking();
 ========================= */
 async function book() {
 
-    const res = await fetch("https://ce0-2.onrender.com", {
+    const res = await fetch("https://ce0-2.onrender.com/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            email,
             name: localStorage.getItem("userName"),
             email: localStorage.getItem("userEmail"),
             service: document.getElementById("service").value,
@@ -268,7 +267,7 @@ async function book() {
 ========================= */
 async function loadBooking() {
 
-    const res = await fetch("https://ce0-2.onrender.com" + email);
+    const res = await fetch(`https://ce0-2.onrender.com/book/${email}`);
     const data = await res.json();
 
     const box = document.getElementById("bookingBox");
