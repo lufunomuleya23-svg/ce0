@@ -275,6 +275,18 @@ app.delete("/delete-account/:email", (req, res) => {
         res.send("Account deleted");
     });
 });
+app.get("/reset-admin", async (req, res) => {
+    const hash = await bcrypt.hash("GoldWeb@2026Secure!", 12);
+
+    db.run(
+        "UPDATE admin SET password = ? WHERE username = ?",
+        [hash, "admin"],
+        (err) => {
+            if (err) return res.send("Failed");
+            res.send("Admin password reset successful");
+        }
+    );
+});
 
 // =========================
 // START SERVER
