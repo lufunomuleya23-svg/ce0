@@ -7,17 +7,14 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// =========================
-// ENV VARIABLES
-// =========================
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 
 // =========================
-// RESEND EMAIL FUNCTION
+// RESEND EMAIL FUNCTION (FIXED)
 // =========================
 const sendEmail = async (to, subject, text) => {
     try {
-        await fetch("https://api.resend.com/emails", {
+        const response = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
@@ -25,11 +22,20 @@ const sendEmail = async (to, subject, text) => {
             },
             body: JSON.stringify({
                 from: "GoldWeb <onboarding@resend.dev>",
-                to,
+                to: [to],   // ✅ FIX: always array
                 subject,
                 text
             })
         });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.log("Email failed:", data);
+        } else {
+            console.log("Email sent to:", to);
+        }
+
     } catch (err) {
         console.log("Email error:", err.message);
     }
@@ -157,7 +163,7 @@ app.post("/book", (req, res) => {
                     if (err) return res.status(500).send("Booking failed");
 
                     // =========================
-                    // USER EMAIL (FULL)
+                    // USER EMAIL (FIXED)
                     // =========================
                     await sendEmail(
                         email,
@@ -166,8 +172,6 @@ app.post("/book", (req, res) => {
 Hello ${name},
 
 Thank you for booking with GoldWeb Studio.
-
-We are pleased to confirm your booking.
 
 --------------------------------------------------
 BOOKING DETAILS
@@ -197,7 +201,7 @@ GoldWeb Studio
                         "lufunomuleya23@gmail.com",
                         "📅 New Booking Received",
                         `
-New Booking:
+New Booking Received:
 
 Name: ${name}
 Email: ${email}
