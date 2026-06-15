@@ -275,21 +275,20 @@ app.delete("/delete-account/:email", (req, res) => {
         res.send("Account deleted");
     });
 });
+
 app.get("/reset-admin", async (req, res) => {
     const hash = await bcrypt.hash("GoldWeb@2026Secure!", 12);
 
     db.run(
-        `INSERT INTO admin (username, password)
-         VALUES (?, ?)
-         ON CONFLICT(username) DO UPDATE SET password = excluded.password`,
+        "INSERT INTO admin (username, password) VALUES (?, ?)",
         ["admin", hash],
-        function (err) {
+        (err) => {
             if (err) {
                 console.log(err.message);
-                return res.send("Reset failed");
+                return res.send("Failed to create admin");
             }
 
-            res.send("Admin created/updated successfully");
+            res.send("Admin created successfully");
         }
     );
 });
