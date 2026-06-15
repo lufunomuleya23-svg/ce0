@@ -236,20 +236,6 @@ app.post("/admin/login", async (req, res) => {
     res.json({ token });
 });
 
-app.get("/create-admin", async (req, res) => {
-    const bcrypt = require("bcrypt");
-
-    const hash = await bcrypt.hash("GoldWeb@2026Secure!", 10);
-
-    await db.query("DELETE FROM admin");
-
-    await db.query(
-        "INSERT INTO admin (username, password) VALUES ($1, $2)",
-        ["admin", hash]
-    );
-
-    res.send("Admin created");
-});
 
 // =========================
 // START SERVER
