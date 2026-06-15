@@ -268,7 +268,7 @@ async function book() {
 ========================= */
 async function loadBooking() {
 
-    const res = await fetch(" https://ce0-2.onrender.com" + email);
+    const res = await fetch("https://ce0-2.onrender.com" + email);
     const data = await res.json();
 
     const box = document.getElementById("bookingBox");
@@ -291,7 +291,7 @@ async function loadBooking() {
 ========================= */
 async function sendMessage() {
 
-    const res = await fetch(" https://ce0-2.onrender.com/message", {
+    const res = await fetch("https://ce0-2.onrender.com/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -326,7 +326,7 @@ async function deleteAccount() {
 
     if (!confirmDelete) return;
 
-    const res = await fetch(" https://ce0-2.onrender.com/delete-account", {
+    const res = await fetch("https://ce0-2.onrender.com/delete-account", {
         method: "DELETE",
         headers: {
             "Content-Type": "application/json"
