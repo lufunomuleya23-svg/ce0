@@ -14,7 +14,9 @@ const JWT_SECRET = "super_secret_key_change_this";
 // EMAIL SETUP
 // =========================
 const transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
     auth: {
         user: "lufunomuleya23@gmail.com",
         pass: "tnpz bqzw vbrp myhu"
