@@ -57,7 +57,7 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // =========================
-// INIT TABLES (NEON SAFE)
+// INIT DATABASE TABLES
 // =========================
 const initDB = async () => {
     await db.query(`
@@ -190,6 +190,24 @@ app.post("/book", async (req, res) => {
 });
 
 // =========================
+// ⭐ FIXED: GET BOOKING (THIS FIXES YOUR LOADING ISSUE)
+// =========================
+app.get("/booking/:email", async (req, res) => {
+    try {
+        const result = await db.query(
+            "SELECT * FROM bookings WHERE email = $1 ORDER BY id DESC LIMIT 1",
+            [req.params.email]
+        );
+
+        res.json(result.rows[0] || null);
+
+    } catch (err) {
+        console.log("Booking error:", err.message);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// =========================
 // MESSAGES
 // =========================
 app.post("/message", async (req, res) => {
@@ -235,7 +253,6 @@ app.post("/admin/login", async (req, res) => {
 
     res.json({ token });
 });
-
 
 // =========================
 // START SERVER
