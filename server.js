@@ -446,7 +446,7 @@ app.post("/forgot-password", (req, res) => {
                 return res.status(404).send("Email not found");
             }
 
-            const link = `http://localhost:3000/reset-password.html?token=${token}`;
+            const link = `https://ce0-2.onrender.com/reset-password.html?token=${token}`;
 
             const mailOptions = {
                 from: "lufunomuleya23@gmail.com",
