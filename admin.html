@@ -209,9 +209,53 @@ async function loadRequests() {
                 ${r.email}<br>
                 📅 ${r.date}<br>
                 ⏰ ${r.time}<br>
-                📝 ${r.message}
+                📝 ${r.message}<br>
+
+                <hr>
+
+                Status:
+                <input id="status-${r.id}" value="${r.status || 'pending'}">
+
+                Notes:
+                <input id="notes-${r.id}" value="${r.adminNotes || ''}">
+
+                <button onclick="updateRequest(${r.id})">Update</button>
+                <button style="background:red" onclick="deleteRequest(${r.id})">Delete</button>
             </div>
         `).join("");
+}
+
+/* ================= UPDATE REQUEST ================= */
+async function updateRequest(id) {
+
+    const status = document.getElementById(`status-${id}`).value;
+    const adminNotes = document.getElementById(`notes-${id}`).value;
+
+    await fetch("https://ce0-2.onrender.com/admin/update-request", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": token
+        },
+        body: JSON.stringify({
+            id,
+            status,
+            adminNotes
+        })
+    });
+
+    loadRequests();
+}
+
+/* ================= DELETE REQUEST ================= */
+async function deleteRequest(id) {
+
+    await fetch(`https://ce0-2.onrender.com/admin/delete-request/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: token }
+    });
+
+    loadRequests();
 }
 
 /* ================= MESSAGES ================= */
