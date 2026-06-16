@@ -234,15 +234,25 @@ async function book() {
 async function loadBooking() {
 
     const res = await fetch(`https://ce0-2.onrender.com/booking/${email}`);
-
     const data = await res.json();
 
     const box = document.getElementById("bookingBox");
 
-    if (!data) {
+    if (!data || !data.id) {
         box.innerHTML = "No booking yet.";
         return;
     }
+
+    box.innerHTML = `
+        <div class="box">
+            <b>${data.service}</b><br>
+            📅 ${data.bookingDate}<br>
+            ⏰ ${data.bookingTime}<br>
+            📌 ${data.status}<br>
+            📝 ${data.adminNotes || "No notes yet"}
+        </div>
+    `;
+}
 
     box.innerHTML = data
 ? `
