@@ -143,7 +143,7 @@ app.post("/login", async (req, res) => {
 });
 
 // =========================
-// USER REQUEST
+// REQUEST
 // =========================
 app.post("/request", async (req, res) => {
     const { name, email, service, date, time, message } = req.body;
@@ -196,14 +196,11 @@ app.delete("/user/:email", async (req, res) => {
 });
 
 // =========================
-// DELETE REQUEST (FIXED)
+// DELETE REQUEST (ADMIN)
 // =========================
-app.delete("/admin/delete-request/:id", async (req, res) => {
+app.delete("/admin/request/:id", async (req, res) => {
     try {
-        const { id } = req.params;
-
-        await db.query("DELETE FROM requests WHERE id=$1", [id]);
-
+        await db.query("DELETE FROM requests WHERE id=$1", [req.params.id]);
         res.send("Request deleted");
     } catch (err) {
         console.log(err.message);
@@ -242,11 +239,7 @@ app.post("/admin/login", async (req, res) => {
     const match = await bcrypt.compare(password, admin.password);
     if (!match) return res.status(401).json({ message: "invalid" });
 
-    const token = jwt.sign(
-        { username },
-        JWT_SECRET,
-        { expiresIn: "2h" }
-    );
+    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: "2h" });
 
     res.json({ token });
 });
@@ -270,7 +263,7 @@ app.get("/admin/messages", async (req, res) => {
 });
 
 // =========================
-// UPDATE REQUEST (FIXED)
+// FIXED UPDATE (IMPORTANT FIX HERE)
 // =========================
 app.post("/admin/update-request", async (req, res) => {
     try {
@@ -281,7 +274,11 @@ app.post("/admin/update-request", async (req, res) => {
              SET status = $1,
                  adminNotes = $2
              WHERE id = $3`,
-            [status, adminNotes, id]
+            [
+                status || "pending",
+                adminNotes || "",
+                id
+            ]
         );
 
         res.json({ success: true });
@@ -293,6 +290,6 @@ app.post("/admin/update-request", async (req, res) => {
 });
 
 // =========================
-// START SERVER
+// START
 // =========================
 app.listen(PORT, () => console.log("Server running on port", PORT));
