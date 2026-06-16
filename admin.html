@@ -130,7 +130,7 @@ button {
 
 let token = localStorage.getItem("adminToken");
 
-// AUTO LOGIN
+/* ================= AUTO LOGIN ================= */
 window.onload = function () {
     if (token) {
         document.getElementById("loginBox").style.display = "none";
@@ -139,7 +139,7 @@ window.onload = function () {
     }
 };
 
-// LOGIN
+/* ================= LOGIN ================= */
 async function loginAdmin() {
     const res = await fetch("https://ce0-2.onrender.com/admin/login", {
         method: "POST",
@@ -166,14 +166,14 @@ async function loginAdmin() {
     loadData();
 }
 
-// LOAD ALL
+/* ================= LOAD DATA ================= */
 function loadData() {
     loadUsers();
     loadBookings();
     loadMessages();
 }
 
-// USERS
+/* ================= USERS ================= */
 async function loadUsers() {
     const res = await fetch("https://ce0-2.onrender.com/admin/users", {
         headers: { Authorization: token }
@@ -190,7 +190,7 @@ async function loadUsers() {
         `).join("");
 }
 
-// BOOKINGS
+/* ================= BOOKINGS ================= */
 async function loadBookings() {
     const res = await fetch("https://ce0-2.onrender.com/admin/bookings", {
         headers: { Authorization: token }
@@ -204,8 +204,8 @@ async function loadBookings() {
                 <b>${b.service || "N/A"}</b><br>
                 ${b.email || "N/A"}<br>
 
-                📅 ${b.bookingDate || "N/A"}  
-                ⏰ ${b.bookingTime || "N/A"}<br>
+                📅 ${b.bookingDate || "Not set"}  
+                ⏰ ${b.bookingTime || "Not set"}<br>
 
                 Status:
                 <input id="status-${b.id}" value="${b.status || 'pending'}">
@@ -220,7 +220,7 @@ async function loadBookings() {
         `).join("");
 }
 
-// UPDATE BOOKING
+/* ================= UPDATE BOOKING ================= */
 async function updateBooking(id) {
 
     const status = document.getElementById(`status-${id}`).value;
@@ -239,10 +239,10 @@ async function updateBooking(id) {
         })
     });
 
-    loadBookings(); // refresh UI
+    await loadBookings(); // IMPORTANT FIX
 }
 
-// MESSAGES
+/* ================= MESSAGES ================= */
 async function loadMessages() {
     const res = await fetch("https://ce0-2.onrender.com/admin/messages", {
         headers: { Authorization: token }
@@ -259,7 +259,7 @@ async function loadMessages() {
         `).join("");
 }
 
-// LOGOUT
+/* ================= LOGOUT ================= */
 function logout() {
     localStorage.removeItem("adminToken");
     location.reload();
