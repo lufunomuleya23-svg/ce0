@@ -233,38 +233,32 @@ async function book() {
 /* ================= LOAD BOOKING ================= */
 async function loadBooking() {
 
-    const res = await fetch(`https://ce0-2.onrender.com/booking/${email}`);
-    const data = await res.json();
+    try {
+        const res = await fetch(`https://ce0-2.onrender.com/booking/${email}`);
+        const data = await res.json();
 
-    const box = document.getElementById("bookingBox");
+        const box = document.getElementById("bookingBox");
 
-    if (!data || !data.id) {
-        box.innerHTML = "No booking yet.";
-        return;
+        if (!data || !data.id) {
+            box.innerHTML = "No booking yet.";
+            return;
+        }
+
+        box.innerHTML = `
+            <div class="box">
+                <b>${data.service || "No service"}</b><br>
+                📅 ${data.bookingDate || "Not set"}<br>
+                ⏰ ${data.bookingTime || "Not set"}<br>
+                📌 ${data.status || "pending"}<br>
+                📝 ${data.adminNotes || "No notes yet"}
+            </div>
+        `;
+
+    } catch (err) {
+        console.log(err);
+        document.getElementById("bookingBox").innerHTML =
+            "Failed to load booking.";
     }
-
-    box.innerHTML = `
-        <div class="box">
-            <b>${data.service}</b><br>
-            📅 ${data.bookingDate}<br>
-            ⏰ ${data.bookingTime}<br>
-            📌 ${data.status}<br>
-            📝 ${data.adminNotes || "No notes yet"}
-        </div>
-    `;
-}
-
-    box.innerHTML = data
-? `
-    <div class="box">
-        <b>${data.service || "No service"}</b><br>
-        📅 ${data.bookingDate || "Not set"}<br>
-        ⏰ ${data.bookingTime || "Not set"}<br>
-        📌 ${data.status || "pending"}<br>
-        📝 ${data.adminNotes || "No notes yet"}
-    </div>
-`
-: "No booking yet.";
 }
 
 /* ================= MESSAGE ================= */
@@ -310,4 +304,3 @@ function logout() {
 
 </body>
 </html>
-
