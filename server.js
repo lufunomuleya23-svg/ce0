@@ -18,7 +18,7 @@ const db = new Pool({
 });
 
 // =========================
-// EMAIL (SAFE)
+// EMAIL
 // =========================
 const sendEmail = async (to, subject, text) => {
     try {
@@ -123,29 +123,26 @@ app.post("/login", async (req, res) => {
     const result = await db.query("SELECT * FROM users WHERE email=$1", [email]);
     const user = result.rows[0];
 
-    if (!user) return res.status(401).json({ message: "invalid login" });
+    if (!user) return res.status(401).json({ message: "invalid" });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ message: "invalid login" });
+    if (!match) return res.status(401).json({ message: "invalid" });
 
     const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "2h" });
 
     res.json({
         name: user.name,
         email: user.email,
+        createdAt: user.createdAt,
         token
     });
 });
 
 // =========================
-// CREATE REQUEST (FIXED DATE + TIME ALWAYS SAVED)
+// USER REQUEST
 // =========================
 app.post("/request", async (req, res) => {
     const { name, email, service, date, time, message } = req.body;
-
-    if (!date || !time) {
-        return res.status(400).send("Date and time required");
-    }
 
     await db.query(
         `INSERT INTO requests (name,email,service,date,time,message)
@@ -155,7 +152,7 @@ app.post("/request", async (req, res) => {
 
     await sendEmail(
         "lufunomuleya23@gmail.com",
-        "New Request Received",
+        "New Client Request",
         `Name: ${name}
 Email: ${email}
 Service: ${service}
@@ -164,11 +161,11 @@ Time: ${time}
 Message: ${message}`
     );
 
-    res.send("Request sent");
+    res.send("Request sent successfully");
 });
 
 // =========================
-// GET LAST REQUEST
+// GET REQUEST
 // =========================
 app.get("/request/:email", async (req, res) => {
     const result = await db.query(
@@ -183,16 +180,23 @@ app.get("/request/:email", async (req, res) => {
 });
 
 // =========================
-// DELETE ACCOUNT (FIXED - THIS WAS MISSING BEFORE)
+// DELETE USER ACCOUNT (FIXED)
 // =========================
-app.delete("/delete-account/:email", async (req, res) => {
+app.delete("/user/:email", async (req, res) => {
     const email = req.params.email;
 
     await db.query("DELETE FROM requests WHERE email=$1", [email]);
-    await db.query("DELETE FROM messages WHERE email=$1", [email]);
     await db.query("DELETE FROM users WHERE email=$1", [email]);
 
     res.send("Account deleted");
+});
+
+// =========================
+// DELETE REQUEST (FIXED)
+// =========================
+app.delete("/request/:id", async (req, res) => {
+    await db.query("DELETE FROM requests WHERE id=$1", [req.params.id]);
+    res.send("Request deleted");
 });
 
 // =========================
@@ -250,16 +254,16 @@ app.get("/admin/messages", async (req, res) => {
 });
 
 // =========================
-// UPDATE REQUEST (STATUS + NOTES FIXED)
+// UPDATE REQUEST (FIXED)
 // =========================
 app.post("/admin/update-request", async (req, res) => {
     const { id, status, adminNotes } = req.body;
 
     await db.query(
         `UPDATE requests
-         SET status = $1,
-             adminNotes = $2
-         WHERE id = $3`,
+         SET status=$1,
+             adminNotes=$2
+         WHERE id=$3`,
         [status, adminNotes, id]
     );
 
@@ -267,8 +271,6 @@ app.post("/admin/update-request", async (req, res) => {
 });
 
 // =========================
-// START SERVER
+// START
 // =========================
-app.listen(PORT, () => {
-    console.log("Server running on port", PORT);
-});
+app.listen(PORT, () => console.log("Server running on port", PORT));
