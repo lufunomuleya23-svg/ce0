@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>User Dashboard</title>
 
-<link rel="stylesheet" href="style.css">
-
 <style>
 body {
     margin: 0;
@@ -204,9 +202,9 @@ if (!email) {
     window.location.href = "login.html";
 }
 
-document.getElementById("welcome").innerText = "Welcome back, " + name;
+document.getElementById("welcome").innerText = "Welcome back, " + (name || "");
 document.getElementById("email").innerText = email;
-document.getElementById("infoName").innerText = name;
+document.getElementById("infoName").innerText = name || "";
 document.getElementById("infoEmail").innerText = email;
 
 loadBooking();
@@ -279,8 +277,6 @@ async function sendMessage() {
 
 /* ================= DELETE ================= */
 async function deleteAccount() {
-
-    const email = localStorage.getItem("userEmail");
 
     const res = await fetch(`https://ce0-2.onrender.com/delete-account/${email}`, {
         method: "DELETE"
