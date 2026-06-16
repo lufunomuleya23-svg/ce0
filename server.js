@@ -18,7 +18,7 @@ const db = new Pool({
 });
 
 // =========================
-// EMAIL
+// EMAIL (SAFE)
 // =========================
 const sendEmail = async (to, subject, text) => {
     try {
@@ -123,10 +123,10 @@ app.post("/login", async (req, res) => {
     const result = await db.query("SELECT * FROM users WHERE email=$1", [email]);
     const user = result.rows[0];
 
-    if (!user) return res.status(401).json({ message: "invalid" });
+    if (!user) return res.status(401).json({ message: "invalid login" });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ message: "invalid" });
+    if (!match) return res.status(401).json({ message: "invalid login" });
 
     const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "2h" });
 
@@ -138,10 +138,14 @@ app.post("/login", async (req, res) => {
 });
 
 // =========================
-// USER REQUEST
+// CREATE REQUEST (FIXED DATE + TIME ALWAYS SAVED)
 // =========================
 app.post("/request", async (req, res) => {
     const { name, email, service, date, time, message } = req.body;
+
+    if (!date || !time) {
+        return res.status(400).send("Date and time required");
+    }
 
     await db.query(
         `INSERT INTO requests (name,email,service,date,time,message)
@@ -151,7 +155,7 @@ app.post("/request", async (req, res) => {
 
     await sendEmail(
         "lufunomuleya23@gmail.com",
-        "New Client Request",
+        "New Request Received",
         `Name: ${name}
 Email: ${email}
 Service: ${service}
@@ -160,11 +164,11 @@ Time: ${time}
 Message: ${message}`
     );
 
-    res.send("Request sent successfully");
+    res.send("Request sent");
 });
 
 // =========================
-// GET USER REQUEST
+// GET LAST REQUEST
 // =========================
 app.get("/request/:email", async (req, res) => {
     const result = await db.query(
@@ -175,24 +179,20 @@ app.get("/request/:email", async (req, res) => {
         [req.params.email]
     );
 
-    const row = result.rows[0];
+    res.json(result.rows[0] || null);
+});
 
-    if (!row) {
-        return res.json({
-            id: null,
-            name: "",
-            email: "",
-            service: "",
-            date: "",
-            time: "",
-            message: "",
-            status: "pending",
-            adminNotes: "",
-            createdAt: null
-        });
-    }
+// =========================
+// DELETE ACCOUNT (FIXED - THIS WAS MISSING BEFORE)
+// =========================
+app.delete("/delete-account/:email", async (req, res) => {
+    const email = req.params.email;
 
-    res.json(row);
+    await db.query("DELETE FROM requests WHERE email=$1", [email]);
+    await db.query("DELETE FROM messages WHERE email=$1", [email]);
+    await db.query("DELETE FROM users WHERE email=$1", [email]);
+
+    res.send("Account deleted");
 });
 
 // =========================
@@ -250,31 +250,25 @@ app.get("/admin/messages", async (req, res) => {
 });
 
 // =========================
-// ADMIN UPDATE REQUEST (FIXED)
+// UPDATE REQUEST (STATUS + NOTES FIXED)
 // =========================
 app.post("/admin/update-request", async (req, res) => {
-    try {
-        const { id, status, adminNotes } = req.body;
+    const { id, status, adminNotes } = req.body;
 
-        if (!id) return res.status(400).send("Missing id");
+    await db.query(
+        `UPDATE requests
+         SET status = $1,
+             adminNotes = $2
+         WHERE id = $3`,
+        [status, adminNotes, id]
+    );
 
-        await db.query(
-            `UPDATE requests
-             SET status = COALESCE($1, status),
-                 adminNotes = COALESCE($2, adminNotes)
-             WHERE id = $3`,
-            [status, adminNotes, id]
-        );
-
-        res.json({ success: true });
-
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).send("update failed");
-    }
+    res.send("updated");
 });
 
 // =========================
 // START SERVER
 // =========================
-app.listen(PORT, () => console.log("Server running on port", PORT));
+app.listen(PORT, () => {
+    console.log("Server running on port", PORT);
+});
