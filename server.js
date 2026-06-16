@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 
 // =========================
-// NEON DATABASE
+// DB
 // =========================
 const db = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -18,7 +18,7 @@ const db = new Pool({
 });
 
 // =========================
-// EMAIL FUNCTION (UNCHANGED)
+// EMAIL (UNCHANGED)
 // =========================
 const sendEmail = async (to, subject, text) => {
     try {
@@ -35,17 +35,8 @@ const sendEmail = async (to, subject, text) => {
                 text
             })
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            console.log("Email failed:", data);
-        } else {
-            console.log("Email sent:", to);
-        }
-
     } catch (err) {
-        console.log("Email error:", err.message);
+        console.log(err.message);
     }
 };
 
@@ -99,7 +90,7 @@ const initDB = async () => {
         )
     `);
 
-    console.log("Neon DB ready");
+    console.log("DB ready");
 };
 
 initDB();
@@ -113,11 +104,11 @@ app.post("/register", async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
 
     await db.query(
-        "INSERT INTO users (name, email, password) VALUES ($1, $2, $3)",
+        "INSERT INTO users (name, email, password) VALUES ($1,$2,$3)",
         [name, email, hash]
     );
 
-    res.json({ message: "User registered successfully" });
+    res.json({ message: "ok" });
 });
 
 // =========================
@@ -127,21 +118,17 @@ app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     const result = await db.query(
-        "SELECT * FROM users WHERE email = $1",
+        "SELECT * FROM users WHERE email=$1",
         [email]
     );
 
     const user = result.rows[0];
-    if (!user) return res.status(401).json({ message: "Invalid login" });
+    if (!user) return res.status(401).json({ message: "Invalid" });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ message: "Invalid login" });
+    if (!match) return res.status(401).json({ message: "Invalid" });
 
-    const token = jwt.sign(
-        { email: user.email },
-        JWT_SECRET,
-        { expiresIn: "2h" }
-    );
+    const token = jwt.sign({ email: user.email }, JWT_SECRET);
 
     res.json({
         name: user.name,
@@ -151,112 +138,53 @@ app.post("/login", async (req, res) => {
 });
 
 // =========================
-// BOOKING
+// BOOKING (FIXED)
 // =========================
 app.post("/book", async (req, res) => {
     const { name, email, service, bookingDate, bookingTime } = req.body;
 
-    try {
-        if (!bookingDate || !bookingTime) {
-            return res.status(400).send("Please select date and time");
-        }
-
-        const existing = await db.query(
-            "SELECT * FROM bookings WHERE bookingDate = $1 AND bookingTime = $2",
-            [bookingDate, bookingTime]
-        );
-
-        if (existing.rows.length > 0) {
-            return res.status(400).send("Time slot not available");
-        }
-
-        await db.query(
-            "INSERT INTO bookings (name, email, service, bookingDate, bookingTime) VALUES ($1,$2,$3,$4,$5)",
-            [name, email, service, bookingDate, bookingTime]
-        );
-
-        // EMAILS (UNCHANGED)
-        await sendEmail(
-            email,
-            "Booking Confirmed - GoldWeb Studio",
-            `
-Hello ${name},
-
-Your booking has been confirmed successfully.
-
-----------------------------------
-BOOKING DETAILS
-----------------------------------
-Service: ${service}
-Date: ${bookingDate}
-Time: ${bookingTime}
-----------------------------------
-
-WHAT HAPPENS NEXT
-----------------------------------
-• We will review your booking
-• You will receive a Zoom/meeting link before the session
-• Please be available at the selected time
-
-Regards,
-GoldWeb Team
-            `
-        );
-
-        await sendEmail(
-            "lufunomuleya23@gmail.com",
-            "📅 New Booking Received",
-            `
-New Booking:
-
-Name: ${name}
-Email: ${email}
-Service: ${service}
-Date: ${bookingDate}
-Time: ${bookingTime}
-            `
-        );
-
-        res.send("Booking successful");
-
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).send("Server error");
+    if (!bookingDate || !bookingTime) {
+        return res.status(400).send("Select date & time");
     }
+
+    const existing = await db.query(
+        "SELECT * FROM bookings WHERE bookingDate=$1 AND bookingTime=$2",
+        [bookingDate, bookingTime]
+    );
+
+    if (existing.rows.length > 0) {
+        return res.status(400).send("Slot taken");
+    }
+
+    await db.query(
+        "INSERT INTO bookings (name,email,service,bookingDate,bookingTime) VALUES ($1,$2,$3,$4,$5)",
+        [name, email, service, bookingDate, bookingTime]
+    );
+
+    res.send("Booked");
 });
 
 // =========================
-// USER BOOKING (SAFE)
+// GET BOOKING (FIXED CLEAN OUTPUT)
 // =========================
 app.get("/booking/:email", async (req, res) => {
-    try {
-        const result = await db.query(
-            `SELECT * FROM bookings
-             WHERE email = $1
-             ORDER BY id DESC
-             LIMIT 1`,
-            [req.params.email]
-        );
+    const result = await db.query(
+        "SELECT * FROM bookings WHERE email=$1 ORDER BY id DESC LIMIT 1",
+        [req.params.email]
+    );
 
-        const row = result.rows[0];
+    const row = result.rows[0];
 
-        if (!row) return res.json(null);
+    if (!row) return res.json(null);
 
-        res.json({
-            id: row.id,
-            name: row.name || "",
-            email: row.email || "",
-            service: row.service || "",
-            bookingDate: row.bookingDate || "",
-            bookingTime: row.bookingTime || "",
-            status: row.status || "pending",
-            adminNotes: row.adminNotes || ""
-        });
-
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).json(null);
-    }
+    res.json({
+        id: row.id,
+        service: row.service || "",
+        bookingDate: row.bookingDate || "",
+        bookingTime: row.bookingTime || "",
+        status: row.status || "pending"
+        // ❌ adminNotes removed from USER VIEW
+    });
 });
 
 // =========================
@@ -266,17 +194,24 @@ app.post("/message", async (req, res) => {
     const { name, email, message } = req.body;
 
     await db.query(
-        "INSERT INTO messages (name, email, message) VALUES ($1,$2,$3)",
+        "INSERT INTO messages (name,email,message) VALUES ($1,$2,$3)",
         [name, email, message]
     );
 
-    await sendEmail(
-        "lufunomuleya23@gmail.com",
-        "New Message",
-        message
-    );
+    res.send("Sent");
+});
 
-    res.send("Message sent");
+// =========================
+// DELETE ACCOUNT (FIXED)
+// =========================
+app.delete("/delete-account/:email", async (req, res) => {
+    const email = req.params.email;
+
+    await db.query("DELETE FROM bookings WHERE email=$1", [email]);
+    await db.query("DELETE FROM messages WHERE email=$1", [email]);
+    await db.query("DELETE FROM users WHERE email=$1", [email]);
+
+    res.send("Deleted");
 });
 
 // =========================
@@ -286,100 +221,54 @@ app.post("/admin/login", async (req, res) => {
     const { username, password } = req.body;
 
     const result = await db.query(
-        "SELECT * FROM admin WHERE username = $1",
+        "SELECT * FROM admin WHERE username=$1",
         [username]
     );
 
     const admin = result.rows[0];
-    if (!admin) return res.status(401).json({ message: "Invalid admin" });
+    if (!admin) return res.status(401).json({ message: "Invalid" });
 
     const match = await bcrypt.compare(password, admin.password);
-    if (!match) return res.status(401).json({ message: "Invalid admin" });
+    if (!match) return res.status(401).json({ message: "Invalid" });
 
-    const token = jwt.sign(
-        { username: admin.username },
-        JWT_SECRET,
-        { expiresIn: "2h" }
-    );
+    const token = jwt.sign({ username }, JWT_SECRET);
 
     res.json({ token });
 });
 
 // =========================
-// ADMIN USERS
+// ADMIN DATA
 // =========================
 app.get("/admin/users", async (req, res) => {
-    const result = await db.query("SELECT id, name, email FROM users ORDER BY id DESC");
+    const result = await db.query("SELECT id,name,email FROM users");
     res.json(result.rows);
 });
 
-// =========================
-// ADMIN BOOKINGS (FIXED SAFE)
-// =========================
 app.get("/admin/bookings", async (req, res) => {
-    try {
-        const result = await db.query("SELECT * FROM bookings ORDER BY id DESC");
-
-        const safe = result.rows.map(row => ({
-            id: row.id,
-            name: row.name || "",
-            email: row.email || "",
-            service: row.service || "",
-            bookingDate: row.bookingDate || "",
-            bookingTime: row.bookingTime || "",
-            status: row.status || "pending",
-            adminNotes: row.adminNotes || ""
-        }));
-
-        res.json(safe);
-
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).json([]);
-    }
+    const result = await db.query("SELECT * FROM bookings ORDER BY id DESC");
+    res.json(result.rows);
 });
 
-// =========================
-// ADMIN MESSAGES
-// =========================
 app.get("/admin/messages", async (req, res) => {
     const result = await db.query("SELECT * FROM messages ORDER BY id DESC");
     res.json(result.rows);
 });
 
 // =========================
-// UPDATE BOOKING (FIXED)
+// UPDATE BOOKING
 // =========================
 app.post("/admin/update-booking", async (req, res) => {
-    try {
-        const { id, status, adminNotes } = req.body;
+    const { id, status, adminNotes } = req.body;
 
-        if (!id) {
-            return res.status(400).json({ message: "Missing ID" });
-        }
+    await db.query(
+        "UPDATE bookings SET status=$1, adminNotes=$2 WHERE id=$3",
+        [status, adminNotes, id]
+    );
 
-        await db.query(
-            `UPDATE bookings 
-             SET status = $1, adminNotes = $2 
-             WHERE id = $3`,
-            [
-                status || "pending",
-                adminNotes || "",
-                id
-            ]
-        );
-
-        res.json({ message: "Booking updated" });
-
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).json({ message: "Update failed" });
-    }
+    res.send("Updated");
 });
 
 // =========================
-// START SERVER
-// =========================
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log("Server running");
 });
