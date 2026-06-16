@@ -18,29 +18,6 @@ const db = new Pool({
 });
 
 // =========================
-// EMAIL
-// =========================
-const sendEmail = async (to, subject, text) => {
-    try {
-        await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                from: "GoldWeb <onboarding@resend.dev>",
-                to: [to],
-                subject,
-                text
-            })
-        });
-    } catch (err) {
-        console.log("Email error:", err.message);
-    }
-};
-
-// =========================
 // MIDDLEWARE
 // =========================
 app.use(cors());
@@ -48,10 +25,9 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // =========================
-// INIT DB
+// INIT DATABASE
 // =========================
 (async () => {
-
     await db.query(`
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -95,11 +71,11 @@ app.use(express.static(__dirname));
         )
     `);
 
-    console.log("DB ready");
+    console.log("Database ready");
 })();
 
 // =========================
-// REGISTER
+// REGISTER USER
 // =========================
 app.post("/register", async (req, res) => {
     const { name, email, password } = req.body;
@@ -111,11 +87,11 @@ app.post("/register", async (req, res) => {
         [name, email, hash]
     );
 
-    res.json({ message: "registered" });
+    res.json({ success: true });
 });
 
 // =========================
-// LOGIN
+// LOGIN USER
 // =========================
 app.post("/login", async (req, res) => {
     const { email, password } = req.body;
@@ -123,16 +99,12 @@ app.post("/login", async (req, res) => {
     const result = await db.query("SELECT * FROM users WHERE email=$1", [email]);
     const user = result.rows[0];
 
-    if (!user) return res.status(401).json({ message: "invalid" });
+    if (!user) return res.status(401).json({ error: "invalid" });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ message: "invalid" });
+    if (!match) return res.status(401).json({ error: "invalid" });
 
-    const token = jwt.sign(
-        { email },
-        JWT_SECRET,
-        { expiresIn: "2h" }
-    );
+    const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "2h" });
 
     res.json({
         name: user.name,
@@ -143,7 +115,7 @@ app.post("/login", async (req, res) => {
 });
 
 // =========================
-// REQUEST
+// CREATE REQUEST
 // =========================
 app.post("/request", async (req, res) => {
     const { name, email, service, date, time, message } = req.body;
@@ -154,22 +126,11 @@ app.post("/request", async (req, res) => {
         [name, email, service, date, time, message]
     );
 
-    await sendEmail(
-        "lufunomuleya23@gmail.com",
-        "New Client Request",
-        `Name: ${name}
-Email: ${email}
-Service: ${service}
-Date: ${date}
-Time: ${time}
-Message: ${message}`
-    );
-
-    res.send("Request sent successfully");
+    res.json({ success: true });
 });
 
 // =========================
-// GET REQUEST
+// GET LAST REQUEST
 // =========================
 app.get("/request/:email", async (req, res) => {
     const result = await db.query(
@@ -192,34 +153,51 @@ app.delete("/user/:email", async (req, res) => {
     await db.query("DELETE FROM requests WHERE email=$1", [email]);
     await db.query("DELETE FROM users WHERE email=$1", [email]);
 
-    res.send("Account deleted");
+    res.json({ success: true });
 });
 
 // =========================
 // DELETE REQUEST (ADMIN)
 // =========================
-app.delete("/admin/request/:id", async (req, res) => {
-    try {
-        await db.query("DELETE FROM requests WHERE id=$1", [req.params.id]);
-        res.send("Request deleted");
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).send("Delete failed");
+app.delete("/admin/delete-request/:id", async (req, res) => {
+    const { id } = req.params;
+
+    const result = await db.query(
+        "DELETE FROM requests WHERE id=$1 RETURNING *",
+        [id]
+    );
+
+    if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Request not found" });
     }
+
+    res.json({ success: true });
 });
 
 // =========================
-// MESSAGE
+// UPDATE REQUEST (STATUS + NOTES)
 // =========================
-app.post("/message", async (req, res) => {
-    const { name, email, message } = req.body;
+app.post("/admin/update-request", async (req, res) => {
+    const { id, status, adminNotes } = req.body;
 
-    await db.query(
-        "INSERT INTO messages (name,email,message) VALUES ($1,$2,$3)",
-        [name, email, message]
+    const result = await db.query(
+        `UPDATE requests
+         SET status=$1,
+             adminNotes=$2
+         WHERE id=$3
+         RETURNING *`,
+        [
+            status || "pending",
+            adminNotes || "",
+            id
+        ]
     );
 
-    res.send("Message sent");
+    if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Not found" });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
 });
 
 // =========================
@@ -234,10 +212,10 @@ app.post("/admin/login", async (req, res) => {
     );
 
     const admin = result.rows[0];
-    if (!admin) return res.status(401).json({ message: "invalid" });
+    if (!admin) return res.status(401).json({ error: "invalid" });
 
     const match = await bcrypt.compare(password, admin.password);
-    if (!match) return res.status(401).json({ message: "invalid" });
+    if (!match) return res.status(401).json({ error: "invalid" });
 
     const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: "2h" });
 
@@ -263,33 +241,8 @@ app.get("/admin/messages", async (req, res) => {
 });
 
 // =========================
-// FIXED UPDATE (IMPORTANT FIX HERE)
+// START SERVER
 // =========================
-app.post("/admin/update-request", async (req, res) => {
-    try {
-        const { id, status, adminNotes } = req.body;
-
-        await db.query(
-            `UPDATE requests
-             SET status = $1,
-                 adminNotes = $2
-             WHERE id = $3`,
-            [
-                status || "pending",
-                adminNotes || "",
-                id
-            ]
-        );
-
-        res.json({ success: true });
-
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).send("update failed");
-    }
+app.listen(PORT, () => {
+    console.log("Server running on port", PORT);
 });
-
-// =========================
-// START
-// =========================
-app.listen(PORT, () => console.log("Server running on port", PORT));
