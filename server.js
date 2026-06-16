@@ -9,24 +9,17 @@ const PORT = process.env.PORT || 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 
-// =========================
-// DATABASE
-// =========================
+// DB
 const db = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// =========================
-// MIDDLEWARE
-// =========================
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// =========================
-// INIT DATABASE
-// =========================
+// INIT DB
 (async () => {
     await db.query(`
         CREATE TABLE IF NOT EXISTS users (
@@ -71,15 +64,13 @@ app.use(express.static(__dirname));
         )
     `);
 
-    console.log("Database ready");
+    console.log("DB ready");
 })();
 
-// =========================
-// REGISTER USER
-// =========================
+/* ================= USERS ================= */
+
 app.post("/register", async (req, res) => {
     const { name, email, password } = req.body;
-
     const hash = await bcrypt.hash(password, 10);
 
     await db.query(
@@ -90,9 +81,6 @@ app.post("/register", async (req, res) => {
     res.json({ success: true });
 });
 
-// =========================
-// LOGIN USER
-// =========================
 app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
@@ -114,9 +102,8 @@ app.post("/login", async (req, res) => {
     });
 });
 
-// =========================
-// CREATE REQUEST
-// =========================
+/* ================= REQUESTS ================= */
+
 app.post("/request", async (req, res) => {
     const { name, email, service, date, time, message } = req.body;
 
@@ -129,24 +116,17 @@ app.post("/request", async (req, res) => {
     res.json({ success: true });
 });
 
-// =========================
-// GET LAST REQUEST
-// =========================
 app.get("/request/:email", async (req, res) => {
     const result = await db.query(
-        `SELECT * FROM requests
-         WHERE email=$1
-         ORDER BY id DESC
-         LIMIT 1`,
+        `SELECT * FROM requests WHERE email=$1 ORDER BY id DESC LIMIT 1`,
         [req.params.email]
     );
 
     res.json(result.rows[0] || null);
 });
 
-// =========================
-// DELETE USER ACCOUNT
-// =========================
+/* ================= USER DELETE ================= */
+
 app.delete("/user/:email", async (req, res) => {
     const email = req.params.email;
 
@@ -156,62 +136,19 @@ app.delete("/user/:email", async (req, res) => {
     res.json({ success: true });
 });
 
-// =========================
-// DELETE REQUEST (ADMIN)
-// =========================
-app.delete("/admin/delete-request/:id", async (req, res) => {
-    const { id } = req.params;
-
-    const result = await db.query(
-        "DELETE FROM requests WHERE id=$1 RETURNING *",
-        [id]
-    );
-
-    if (result.rowCount === 0) {
-        return res.status(404).json({ error: "Request not found" });
-    }
-
+app.delete("/request/:id", async (req, res) => {
+    await db.query("DELETE FROM requests WHERE id=$1", [req.params.id]);
     res.json({ success: true });
 });
 
-// =========================
-// UPDATE REQUEST (STATUS + NOTES)
-// =========================
-app.post("/admin/update-request", async (req, res) => {
-    const { id, status, adminNotes } = req.body;
+/* ================= ADMIN ================= */
 
-    const result = await db.query(
-        `UPDATE requests
-         SET status=$1,
-             adminNotes=$2
-         WHERE id=$3
-         RETURNING *`,
-        [
-            status || "pending",
-            adminNotes || "",
-            id
-        ]
-    );
-
-    if (result.rowCount === 0) {
-        return res.status(404).json({ error: "Not found" });
-    }
-
-    res.json({ success: true, data: result.rows[0] });
-});
-
-// =========================
-// ADMIN LOGIN
-// =========================
 app.post("/admin/login", async (req, res) => {
     const { username, password } = req.body;
 
-    const result = await db.query(
-        "SELECT * FROM admin WHERE username=$1",
-        [username]
-    );
-
+    const result = await db.query("SELECT * FROM admin WHERE username=$1", [username]);
     const admin = result.rows[0];
+
     if (!admin) return res.status(401).json({ error: "invalid" });
 
     const match = await bcrypt.compare(password, admin.password);
@@ -222,9 +159,8 @@ app.post("/admin/login", async (req, res) => {
     res.json({ token });
 });
 
-// =========================
-// ADMIN DATA
-// =========================
+/* ================= ADMIN DATA ================= */
+
 app.get("/admin/users", async (req, res) => {
     const result = await db.query("SELECT * FROM users ORDER BY id DESC");
     res.json(result.rows);
@@ -240,9 +176,31 @@ app.get("/admin/messages", async (req, res) => {
     res.json(result.rows);
 });
 
-// =========================
-// START SERVER
-// =========================
+/* ================= UPDATE REQUEST ================= */
+
+app.post("/admin/update-request", async (req, res) => {
+    const { id, status, adminNotes } = req.body;
+
+    await db.query(
+        `UPDATE requests
+         SET status=$1,
+             adminNotes=$2
+         WHERE id=$3`,
+        [status || "pending", adminNotes || "", id]
+    );
+
+    res.json({ success: true });
+});
+
+/* ================= ADMIN DELETE ================= */
+
+app.delete("/admin/delete-request/:id", async (req, res) => {
+    await db.query("DELETE FROM requests WHERE id=$1", [req.params.id]);
+    res.json({ success: true });
+});
+
+/* ================= START ================= */
+
 app.listen(PORT, () => {
-    console.log("Server running on port", PORT);
+    console.log("Server running on", PORT);
 });
