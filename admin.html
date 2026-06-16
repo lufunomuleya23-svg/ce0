@@ -1,296 +1,137 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard</title>
-
 <style>
-body {
-    margin: 0;
-    font-family: Arial;
-    background: #0b0b0f;
-    color: white;
-}
-
-.login-box {
-    max-width: 350px;
-    margin: 120px auto;
-    padding: 20px;
-    background: #111;
-    border: 1px solid gold;
-    border-radius: 10px;
-    text-align: center;
-}
-
-.admin-panel {
-    display: none;
-    padding: 20px;
-    max-width: 1200px;
-    margin: auto;
-}
-
-.topbar {
-    display: flex;
-    justify-content: space-between;
-    border-bottom: 1px solid gold;
-    padding-bottom: 10px;
-}
-
-.topbar h1 {
-    color: gold;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 15px;
-    margin-top: 20px;
-}
-
-.card {
-    background: #111;
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #222;
-}
-
-.item {
-    padding: 10px;
-    border: 1px solid #222;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    font-size: 14px;
-}
-
-input {
-    width: 100%;
-    padding: 6px;
-    margin-top: 5px;
-    background: #0b0b0f;
-    border: 1px solid #333;
-    color: white;
-    border-radius: 5px;
-}
-
-button {
-    width: 100%;
-    padding: 8px;
-    margin-top: 10px;
-    background: gold;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
-    border-radius: 6px;
-}
+body { background:#0b0b0f; color:white; font-family:Arial; }
+.login-box, .admin-panel { max-width:1000px; margin:auto; padding:20px; }
+.login-box { margin-top:120px; }
+.card { background:#111; padding:15px; margin-top:10px; border-radius:10px; }
+input, button { width:100%; padding:8px; margin-top:5px; }
+button { background:gold; border:none; cursor:pointer; }
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div class="login-box" id="loginBox">
-    <h2 style="color:gold;">Admin Login</h2>
-
-    <input id="username" placeholder="Username">
-    <input id="password" type="password" placeholder="Password">
-
-    <button onclick="login()">Login</button>
+<h2>Admin Login</h2>
+<input id="username" placeholder="Username">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
 </div>
 
-<!-- DASHBOARD -->
-<div class="admin-panel" id="adminPanel">
+<div class="admin-panel" id="adminPanel" style="display:none">
 
-    <div class="topbar">
-        <h1>Admin Dashboard</h1>
-        <button onclick="logout()">Logout</button>
-    </div>
+<h2>Admin Dashboard</h2>
+<button onclick="logout()">Logout</button>
 
-    <div class="grid">
+<h3>Requests</h3>
+<div id="requests"></div>
 
-        <div class="card">
-            <h3>Users</h3>
-            <div id="users"></div>
-        </div>
+<h3>Users</h3>
+<div id="users"></div>
 
-        <div class="card">
-            <h3>Requests</h3>
-            <div id="requests"></div>
-        </div>
-
-        <div class="card">
-            <h3>Messages</h3>
-            <div id="messages"></div>
-        </div>
-
-    </div>
 </div>
 
 <script>
 
 let token = localStorage.getItem("adminToken");
 
-/* ================= AUTO LOGIN ================= */
-window.onload = function () {
-    if (token) {
-        document.getElementById("loginBox").style.display = "none";
-        document.getElementById("adminPanel").style.display = "block";
-        loadAll();
-    }
-};
-
-/* ================= LOGIN ================= */
-async function login() {
-
-    const res = await fetch("https://ce0-2.onrender.com/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            username: document.getElementById("username").value,
-            password: document.getElementById("password").value
-        })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-        alert("Login failed");
-        return;
-    }
-
-    token = data.token;
-    localStorage.setItem("adminToken", token);
-
+if (token) {
     document.getElementById("loginBox").style.display = "none";
     document.getElementById("adminPanel").style.display = "block";
-
     loadAll();
 }
 
-/* ================= LOAD ALL ================= */
-function loadAll() {
-    loadUsers();
-    loadRequests();
-    loadMessages();
+async function login() {
+
+const res = await fetch("/admin/login", {
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body:JSON.stringify({
+username:username.value,
+password:password.value
+})
+});
+
+const data = await res.json();
+token = data.token;
+localStorage.setItem("adminToken", token);
+
+document.getElementById("loginBox").style.display="none";
+document.getElementById("adminPanel").style.display="block";
+
+loadAll();
 }
 
-/* ================= USERS ================= */
-async function loadUsers() {
-
-    const res = await fetch("https://ce0-2.onrender.com/admin/users", {
-        headers: { Authorization: token }
-    });
-
-    const data = await res.json();
-
-    document.getElementById("users").innerHTML =
-        (data || []).map(u => `
-            <div class="item">
-                <b>${u.name}</b><br>
-                ${u.email}
-            </div>
-        `).join("");
+function loadAll(){
+loadRequests();
+loadUsers();
 }
 
-/* ================= REQUESTS ================= */
-async function loadRequests() {
+async function loadRequests(){
+const res = await fetch("/admin/requests");
+const data = await res.json();
 
-    const res = await fetch("https://ce0-2.onrender.com/admin/requests", {
-        headers: { Authorization: token }
-    });
+document.getElementById("requests").innerHTML =
+data.map(r => `
+<div class="card">
+<b>${r.name}</b><br>
+${r.service}<br>
+${r.message}<br>
 
-    const data = await res.json();
+Status:
+<input id="s${r.id}" value="${r.status}">
 
-    document.getElementById("requests").innerHTML =
-        (data || []).map(r => `
-            <div class="item">
-                <b>${r.service}</b><br>
-                ${r.name}<br>
-                ${r.email}<br>
-                📅 ${r.date}<br>
-                ⏰ ${r.time}<br>
-                📝 ${r.message}<br>
+Notes:
+<input id="n${r.id}" value="${r.adminNotes}">
 
-                <hr>
-
-                Status:
-                <input id="status-${r.id}" value="${r.status || 'pending'}">
-
-                Notes:
-                <input id="notes-${r.id}" value="${r.adminNotes || ''}">
-
-                <button onclick="updateRequest(${r.id})">Update</button>
-                <button style="background:red" onclick="deleteRequest(${r.id})">Delete</button>
-            </div>
-        `).join("");
+<button onclick="update(${r.id})">Update</button>
+<button onclick="del(${r.id})" style="background:red">Delete</button>
+</div>
+`).join("");
 }
 
-/* ================= UPDATE REQUEST ================= */
-async function updateRequest(id) {
+async function update(id){
 
-    const status = document.getElementById(`status-${id}`).value;
-    const adminNotes = document.getElementById(`notes-${id}`).value;
+await fetch("/admin/update-request", {
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"Authorization":token
+},
+body:JSON.stringify({
+id,
+status:document.getElementById("s"+id).value,
+adminNotes:document.getElementById("n"+id).value
+})
+});
 
-    const res = await fetch("https://ce0-2.onrender.com/admin/update-request", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": token
-        },
-        body: JSON.stringify({
-            id,
-            status,
-            adminNotes
-        })
-    });
-
-    if (!res.ok) {
-        alert("Update failed");
-        return;
-    }
-
-    loadRequests();
+loadRequests();
 }
 
-/* ================= DELETE REQUEST (FIXED) ================= */
-async function deleteRequest(id) {
-
-    const res = await fetch(`https://ce0-2.onrender.com/admin/request/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: token }
-    });
-
-    if (!res.ok) {
-        alert("Delete failed");
-        return;
-    }
-
-    loadRequests();
+async function del(id){
+await fetch("/admin/delete-request/"+id,{method:"DELETE"});
+loadRequests();
 }
 
-/* ================= MESSAGES ================= */
-async function loadMessages() {
+async function loadUsers(){
+const res = await fetch("/admin/users");
+const data = await res.json();
 
-    const res = await fetch("https://ce0-2.onrender.com/admin/messages", {
-        headers: { Authorization: token }
-    });
-
-    const data = await res.json();
-
-    document.getElementById("messages").innerHTML =
-        (data || []).map(m => `
-            <div class="item">
-                <b>${m.name}</b><br>
-                ${m.email}<br>
-                ${m.message}
-            </div>
-        `).join("");
+document.getElementById("users").innerHTML =
+data.map(u=>`
+<div class="card">
+${u.name}<br>
+${u.email}
+</div>
+`).join("");
 }
 
-/* ================= LOGOUT ================= */
-function logout() {
-    localStorage.removeItem("adminToken");
-    location.reload();
+function logout(){
+localStorage.clear();
+location.reload();
 }
 
 </script>
