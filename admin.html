@@ -231,7 +231,7 @@ async function updateRequest(id) {
     const status = document.getElementById(`status-${id}`).value;
     const adminNotes = document.getElementById(`notes-${id}`).value;
 
-    await fetch("https://ce0-2.onrender.com/admin/update-request", {
+    const res = await fetch("https://ce0-2.onrender.com/admin/update-request", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -244,16 +244,26 @@ async function updateRequest(id) {
         })
     });
 
+    if (!res.ok) {
+        alert("Update failed");
+        return;
+    }
+
     loadRequests();
 }
 
-/* ================= DELETE REQUEST ================= */
+/* ================= DELETE REQUEST (FIXED) ================= */
 async function deleteRequest(id) {
 
-    await fetch(`https://ce0-2.onrender.com/admin/delete-request/${id}`, {
+    const res = await fetch(`https://ce0-2.onrender.com/admin/request/${id}`, {
         method: "DELETE",
         headers: { Authorization: token }
     });
+
+    if (!res.ok) {
+        alert("Delete failed");
+        return;
+    }
 
     loadRequests();
 }
