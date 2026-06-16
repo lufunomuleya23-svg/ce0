@@ -244,12 +244,17 @@ async function loadBooking() {
         return;
     }
 
-    box.innerHTML = `
-        <div class="box">
-            <b>${data.service}</b><br>
-            ${data.bookingDate} - ${data.bookingTime}
-        </div>
-    `;
+    box.innerHTML = data
+? `
+    <div class="box">
+        <b>${data.service || "No service"}</b><br>
+        📅 ${data.bookingDate || "Not set"}<br>
+        ⏰ ${data.bookingTime || "Not set"}<br>
+        📌 ${data.status || "pending"}<br>
+        📝 ${data.adminNotes || "No notes yet"}
+    </div>
+`
+: "No booking yet.";
 }
 
 /* ================= MESSAGE ================= */
