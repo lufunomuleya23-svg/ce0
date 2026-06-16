@@ -51,12 +51,14 @@ app.use(express.static(__dirname));
 // INIT DB
 // =========================
 (async () => {
+
     await db.query(`
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             name TEXT,
             email TEXT UNIQUE,
-            password TEXT
+            password TEXT,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
@@ -68,7 +70,10 @@ app.use(express.static(__dirname));
             service TEXT,
             date TEXT,
             time TEXT,
-            message TEXT
+            message TEXT,
+            status TEXT DEFAULT 'pending',
+            adminNotes TEXT DEFAULT '',
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
@@ -77,7 +82,8 @@ app.use(express.static(__dirname));
             id SERIAL PRIMARY KEY,
             name TEXT,
             email TEXT,
-            message TEXT
+            message TEXT,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
@@ -100,7 +106,7 @@ app.post("/register", async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
 
     await db.query(
-        "INSERT INTO users (name, email, password) VALUES ($1,$2,$3)",
+        "INSERT INTO users (name,email,password) VALUES ($1,$2,$3)",
         [name, email, hash]
     );
 
@@ -131,17 +137,17 @@ app.post("/login", async (req, res) => {
 });
 
 // =========================
-// USER REQUEST (NEW SIMPLIFIED SYSTEM)
+// USER REQUEST
 // =========================
 app.post("/request", async (req, res) => {
     const { name, email, service, date, time, message } = req.body;
 
     await db.query(
-        "INSERT INTO requests (name,email,service,date,time,message) VALUES ($1,$2,$3,$4,$5,$6)",
+        `INSERT INTO requests (name,email,service,date,time,message)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
         [name, email, service, date, time, message]
     );
 
-    // email to you
     await sendEmail(
         "lufunomuleya23@gmail.com",
         "New Client Request",
@@ -161,15 +167,31 @@ Message: ${message}`
 // =========================
 app.get("/request/:email", async (req, res) => {
     const result = await db.query(
-        "SELECT * FROM requests WHERE email=$1 ORDER BY id DESC LIMIT 1",
+        `SELECT * FROM requests
+         WHERE email=$1
+         ORDER BY id DESC
+         LIMIT 1`,
         [req.params.email]
     );
 
-    res.json(result.rows[0] || null);
+    const row = result.rows[0];
+
+    res.json(row || {
+        id: null,
+        name: "",
+        email: "",
+        service: "",
+        date: "",
+        time: "",
+        message: "",
+        status: "pending",
+        adminNotes: "",
+        createdAt: null
+    });
 });
 
 // =========================
-// MESSAGE (STAYS SAME)
+// MESSAGE
 // =========================
 app.post("/message", async (req, res) => {
     const { name, email, message } = req.body;
@@ -188,9 +210,12 @@ app.post("/message", async (req, res) => {
 app.post("/admin/login", async (req, res) => {
     const { username, password } = req.body;
 
-    const result = await db.query("SELECT * FROM admin WHERE username=$1", [username]);
-    const admin = result.rows[0];
+    const result = await db.query(
+        "SELECT * FROM admin WHERE username=$1",
+        [username]
+    );
 
+    const admin = result.rows[0];
     if (!admin) return res.status(401).json({ message: "invalid" });
 
     const match = await bcrypt.compare(password, admin.password);
@@ -205,7 +230,7 @@ app.post("/admin/login", async (req, res) => {
 // ADMIN DATA
 // =========================
 app.get("/admin/users", async (req, res) => {
-    const result = await db.query("SELECT id,name,email FROM users ORDER BY id DESC");
+    const result = await db.query("SELECT * FROM users ORDER BY id DESC");
     res.json(result.rows);
 });
 
@@ -217,6 +242,22 @@ app.get("/admin/requests", async (req, res) => {
 app.get("/admin/messages", async (req, res) => {
     const result = await db.query("SELECT * FROM messages ORDER BY id DESC");
     res.json(result.rows);
+});
+
+// =========================
+// ADMIN UPDATE (STATUS + NOTES FIX)
+// =========================
+app.post("/admin/update-request", async (req, res) => {
+    const { id, status, adminNotes } = req.body;
+
+    await db.query(
+        `UPDATE requests
+         SET status=$1, adminNotes=$2
+         WHERE id=$3`,
+        [status, adminNotes, id]
+    );
+
+    res.send("updated");
 });
 
 // =========================
