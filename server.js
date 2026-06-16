@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 
 // =========================
-// DB
+// DATABASE
 // =========================
 const db = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -18,11 +18,11 @@ const db = new Pool({
 });
 
 // =========================
-// EMAIL (UNCHANGED)
+// EMAIL
 // =========================
 const sendEmail = async (to, subject, text) => {
     try {
-        const response = await fetch("https://api.resend.com/emails", {
+        await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
@@ -36,7 +36,7 @@ const sendEmail = async (to, subject, text) => {
             })
         });
     } catch (err) {
-        console.log(err.message);
+        console.log("Email error:", err.message);
     }
 };
 
@@ -50,7 +50,7 @@ app.use(express.static(__dirname));
 // =========================
 // INIT DB
 // =========================
-const initDB = async () => {
+(async () => {
     await db.query(`
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -61,15 +61,14 @@ const initDB = async () => {
     `);
 
     await db.query(`
-        CREATE TABLE IF NOT EXISTS bookings (
+        CREATE TABLE IF NOT EXISTS requests (
             id SERIAL PRIMARY KEY,
             name TEXT,
             email TEXT,
             service TEXT,
-            bookingDate TEXT,
-            bookingTime TEXT,
-            status TEXT DEFAULT 'pending',
-            adminNotes TEXT
+            date TEXT,
+            time TEXT,
+            message TEXT
         )
     `);
 
@@ -91,16 +90,13 @@ const initDB = async () => {
     `);
 
     console.log("DB ready");
-};
-
-initDB();
+})();
 
 // =========================
 // REGISTER
 // =========================
 app.post("/register", async (req, res) => {
     const { name, email, password } = req.body;
-
     const hash = await bcrypt.hash(password, 10);
 
     await db.query(
@@ -108,7 +104,7 @@ app.post("/register", async (req, res) => {
         [name, email, hash]
     );
 
-    res.json({ message: "ok" });
+    res.json({ message: "registered" });
 });
 
 // =========================
@@ -117,18 +113,15 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
-    const result = await db.query(
-        "SELECT * FROM users WHERE email=$1",
-        [email]
-    );
-
+    const result = await db.query("SELECT * FROM users WHERE email=$1", [email]);
     const user = result.rows[0];
-    if (!user) return res.status(401).json({ message: "Invalid" });
+
+    if (!user) return res.status(401).json({ message: "invalid" });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ message: "Invalid" });
+    if (!match) return res.status(401).json({ message: "invalid" });
 
-    const token = jwt.sign({ email: user.email }, JWT_SECRET);
+    const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "2h" });
 
     res.json({
         name: user.name,
@@ -138,57 +131,45 @@ app.post("/login", async (req, res) => {
 });
 
 // =========================
-// BOOKING (FIXED)
+// USER REQUEST (NEW SIMPLIFIED SYSTEM)
 // =========================
-app.post("/book", async (req, res) => {
-    const { name, email, service, bookingDate, bookingTime } = req.body;
-
-    if (!bookingDate || !bookingTime) {
-        return res.status(400).send("Select date & time");
-    }
-
-    const existing = await db.query(
-        "SELECT * FROM bookings WHERE bookingDate=$1 AND bookingTime=$2",
-        [bookingDate, bookingTime]
-    );
-
-    if (existing.rows.length > 0) {
-        return res.status(400).send("Slot taken");
-    }
+app.post("/request", async (req, res) => {
+    const { name, email, service, date, time, message } = req.body;
 
     await db.query(
-        "INSERT INTO bookings (name,email,service,bookingDate,bookingTime) VALUES ($1,$2,$3,$4,$5)",
-        [name, email, service, bookingDate, bookingTime]
+        "INSERT INTO requests (name,email,service,date,time,message) VALUES ($1,$2,$3,$4,$5,$6)",
+        [name, email, service, date, time, message]
     );
 
-    res.send("Booked");
+    // email to you
+    await sendEmail(
+        "lufunomuleya23@gmail.com",
+        "New Client Request",
+        `Name: ${name}
+Email: ${email}
+Service: ${service}
+Date: ${date}
+Time: ${time}
+Message: ${message}`
+    );
+
+    res.send("Request sent successfully");
 });
 
 // =========================
-// GET BOOKING (FIXED CLEAN OUTPUT)
+// GET USER REQUEST
 // =========================
-app.get("/booking/:email", async (req, res) => {
+app.get("/request/:email", async (req, res) => {
     const result = await db.query(
-        "SELECT * FROM bookings WHERE email=$1 ORDER BY id DESC LIMIT 1",
+        "SELECT * FROM requests WHERE email=$1 ORDER BY id DESC LIMIT 1",
         [req.params.email]
     );
 
-    const row = result.rows[0];
-
-    if (!row) return res.json(null);
-
-    res.json({
-        id: row.id,
-        service: row.service || "",
-        bookingDate: row.bookingDate || "",
-        bookingTime: row.bookingTime || "",
-        status: row.status || "pending"
-        // ❌ adminNotes removed from USER VIEW
-    });
+    res.json(result.rows[0] || null);
 });
 
 // =========================
-// MESSAGE
+// MESSAGE (STAYS SAME)
 // =========================
 app.post("/message", async (req, res) => {
     const { name, email, message } = req.body;
@@ -198,20 +179,7 @@ app.post("/message", async (req, res) => {
         [name, email, message]
     );
 
-    res.send("Sent");
-});
-
-// =========================
-// DELETE ACCOUNT (FIXED)
-// =========================
-app.delete("/delete-account/:email", async (req, res) => {
-    const email = req.params.email;
-
-    await db.query("DELETE FROM bookings WHERE email=$1", [email]);
-    await db.query("DELETE FROM messages WHERE email=$1", [email]);
-    await db.query("DELETE FROM users WHERE email=$1", [email]);
-
-    res.send("Deleted");
+    res.send("Message sent");
 });
 
 // =========================
@@ -220,18 +188,15 @@ app.delete("/delete-account/:email", async (req, res) => {
 app.post("/admin/login", async (req, res) => {
     const { username, password } = req.body;
 
-    const result = await db.query(
-        "SELECT * FROM admin WHERE username=$1",
-        [username]
-    );
-
+    const result = await db.query("SELECT * FROM admin WHERE username=$1", [username]);
     const admin = result.rows[0];
-    if (!admin) return res.status(401).json({ message: "Invalid" });
+
+    if (!admin) return res.status(401).json({ message: "invalid" });
 
     const match = await bcrypt.compare(password, admin.password);
-    if (!match) return res.status(401).json({ message: "Invalid" });
+    if (!match) return res.status(401).json({ message: "invalid" });
 
-    const token = jwt.sign({ username }, JWT_SECRET);
+    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: "2h" });
 
     res.json({ token });
 });
@@ -240,12 +205,12 @@ app.post("/admin/login", async (req, res) => {
 // ADMIN DATA
 // =========================
 app.get("/admin/users", async (req, res) => {
-    const result = await db.query("SELECT id,name,email FROM users");
+    const result = await db.query("SELECT id,name,email FROM users ORDER BY id DESC");
     res.json(result.rows);
 });
 
-app.get("/admin/bookings", async (req, res) => {
-    const result = await db.query("SELECT * FROM bookings ORDER BY id DESC");
+app.get("/admin/requests", async (req, res) => {
+    const result = await db.query("SELECT * FROM requests ORDER BY id DESC");
     res.json(result.rows);
 });
 
@@ -255,20 +220,6 @@ app.get("/admin/messages", async (req, res) => {
 });
 
 // =========================
-// UPDATE BOOKING
+// START
 // =========================
-app.post("/admin/update-booking", async (req, res) => {
-    const { id, status, adminNotes } = req.body;
-
-    await db.query(
-        "UPDATE bookings SET status=$1, adminNotes=$2 WHERE id=$3",
-        [status, adminNotes, id]
-    );
-
-    res.send("Updated");
-});
-
-// =========================
-app.listen(PORT, () => {
-    console.log("Server running");
-});
+app.listen(PORT, () => console.log("Server running"));
