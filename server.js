@@ -237,7 +237,13 @@ app.get("/booking/:email", async (req, res) => {
             [req.params.email]
         );
 
-        res.json(result.rows[0] || null);
+        res.json(result.rows[0] || {
+    service: "",
+    bookingDate: "",
+    bookingTime: "",
+    status: "pending",
+    adminNotes: ""
+});
 
     } catch {
         res.status(500).json({ message: "Server error" });
