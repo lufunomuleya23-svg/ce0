@@ -78,7 +78,7 @@ const initDB = async () => {
             bookingDate TEXT,
             bookingTime TEXT,
             status TEXT DEFAULT 'pending',
-            adminNotes TEXT
+            adminNotes TEXT DEFAULT ''
         )
     `);
 
@@ -171,10 +171,11 @@ app.post("/book", async (req, res) => {
         }
 
         await db.query(
-            "INSERT INTO bookings (name, email, service, bookingDate, bookingTime) VALUES ($1,$2,$3,$4,$5)",
+            "INSERT INTO bookings (name, email, service, bookingDate, bookingTime, status, adminNotes) VALUES ($1,$2,$3,$4,$5,'pending','')",
             [name, email, service, bookingDate, bookingTime]
         );
 
+        // EMAILS (UNCHANGED)
         await sendEmail(
             email,
             "Booking Confirmed - GoldWeb Studio",
@@ -225,7 +226,7 @@ Time: ${bookingTime}
 });
 
 // =========================
-// GET USER BOOKING
+// GET USER BOOKING (FIXED SAFE OUTPUT)
 // =========================
 app.get("/booking/:email", async (req, res) => {
     try {
@@ -237,13 +238,24 @@ app.get("/booking/:email", async (req, res) => {
             [req.params.email]
         );
 
-        res.json(result.rows[0] || {
-    service: "",
-    bookingDate: "",
-    bookingTime: "",
-    status: "pending",
-    adminNotes: ""
-});
+        const row = result.rows[0];
+
+        res.json(row ? {
+            id: row.id,
+            name: row.name || "",
+            email: row.email || "",
+            service: row.service || "",
+            bookingDate: row.bookingDate || "",
+            bookingTime: row.bookingTime || "",
+            status: row.status || "pending",
+            adminNotes: row.adminNotes || ""
+        } : {
+            service: "",
+            bookingDate: "",
+            bookingTime: "",
+            status: "pending",
+            adminNotes: ""
+        });
 
     } catch {
         res.status(500).json({ message: "Server error" });
@@ -301,44 +313,40 @@ app.post("/admin/login", async (req, res) => {
 // ADMIN ROUTES
 // =========================
 
-// USERS
 app.get("/admin/users", async (req, res) => {
-    const result = await db.query(
-        "SELECT id, name, email FROM users ORDER BY id DESC"
-    );
+    const result = await db.query("SELECT id, name, email FROM users ORDER BY id DESC");
     res.json(result.rows);
 });
 
-// BOOKINGS
 app.get("/admin/bookings", async (req, res) => {
-    const result = await db.query(
-        "SELECT * FROM bookings ORDER BY id DESC"
-    );
+    const result = await db.query("SELECT * FROM bookings ORDER BY id DESC");
     res.json(result.rows);
 });
 
-// MESSAGES
 app.get("/admin/messages", async (req, res) => {
-    const result = await db.query(
-        "SELECT * FROM messages ORDER BY id DESC"
-    );
+    const result = await db.query("SELECT * FROM messages ORDER BY id DESC");
     res.json(result.rows);
 });
 
 // =========================
-// UPDATE BOOKING (STATUS + NOTES)
+// UPDATE BOOKING
 // =========================
 app.post("/admin/update-booking", async (req, res) => {
     const { id, status, adminNotes } = req.body;
 
-    await db.query(
-        `UPDATE bookings 
-         SET status = $1, adminNotes = $2 
-         WHERE id = $3`,
-        [status, adminNotes, id]
-    );
+    try {
+        await db.query(
+            `UPDATE bookings 
+             SET status = $1, adminNotes = $2 
+             WHERE id = $3`,
+            [status || "pending", adminNotes || "", id]
+        );
 
-    res.send("Booking updated");
+        res.send("Booking updated");
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).send("Update failed");
+    }
 });
 
 // =========================
