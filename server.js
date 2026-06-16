@@ -151,13 +151,12 @@ app.post("/login", async (req, res) => {
 });
 
 // =========================
-// BOOKING (FIXED VALIDATION)
+// BOOKING
 // =========================
 app.post("/book", async (req, res) => {
     const { name, email, service, bookingDate, bookingTime } = req.body;
 
     try {
-        // ✅ FIX: prevent empty values (THIS WAS YOUR MAIN ISSUE)
         if (!bookingDate || !bookingTime) {
             return res.status(400).send("Please select date and time");
         }
@@ -227,7 +226,7 @@ Time: ${bookingTime}
 });
 
 // =========================
-// GET BOOKING (FIXED SAFE RESPONSE)
+// USER BOOKING (SAFE)
 // =========================
 app.get("/booking/:email", async (req, res) => {
     try {
@@ -243,7 +242,6 @@ app.get("/booking/:email", async (req, res) => {
 
         if (!row) return res.json(null);
 
-        // ✅ FIX: ensure no undefined values reach frontend
         res.json({
             id: row.id,
             name: row.name || "",
@@ -308,41 +306,79 @@ app.post("/admin/login", async (req, res) => {
 });
 
 // =========================
-// ADMIN ROUTES
+// ADMIN USERS
 // =========================
 app.get("/admin/users", async (req, res) => {
     const result = await db.query("SELECT id, name, email FROM users ORDER BY id DESC");
     res.json(result.rows);
 });
 
+// =========================
+// ADMIN BOOKINGS (FIXED SAFE)
+// =========================
 app.get("/admin/bookings", async (req, res) => {
-    const result = await db.query("SELECT * FROM bookings ORDER BY id DESC");
-    res.json(result.rows);
+    try {
+        const result = await db.query("SELECT * FROM bookings ORDER BY id DESC");
+
+        const safe = result.rows.map(row => ({
+            id: row.id,
+            name: row.name || "",
+            email: row.email || "",
+            service: row.service || "",
+            bookingDate: row.bookingDate || "",
+            bookingTime: row.bookingTime || "",
+            status: row.status || "pending",
+            adminNotes: row.adminNotes || ""
+        }));
+
+        res.json(safe);
+
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).json([]);
+    }
 });
 
+// =========================
+// ADMIN MESSAGES
+// =========================
 app.get("/admin/messages", async (req, res) => {
     const result = await db.query("SELECT * FROM messages ORDER BY id DESC");
     res.json(result.rows);
 });
 
 // =========================
-// UPDATE BOOKING
+// UPDATE BOOKING (FIXED)
 // =========================
 app.post("/admin/update-booking", async (req, res) => {
-    const { id, status, adminNotes } = req.body;
+    try {
+        const { id, status, adminNotes } = req.body;
 
-    await db.query(
-        `UPDATE bookings 
-         SET status = $1, adminNotes = $2 
-         WHERE id = $3`,
-        [status, adminNotes, id]
-    );
+        if (!id) {
+            return res.status(400).json({ message: "Missing ID" });
+        }
 
-    res.send("Booking updated");
+        await db.query(
+            `UPDATE bookings 
+             SET status = $1, adminNotes = $2 
+             WHERE id = $3`,
+            [
+                status || "pending",
+                adminNotes || "",
+                id
+            ]
+        );
+
+        res.json({ message: "Booking updated" });
+
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).json({ message: "Update failed" });
+    }
 });
 
 // =========================
-// START
+// START SERVER
 // =========================
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
