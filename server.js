@@ -109,6 +109,7 @@ initDB();
 // =========================
 app.post("/register", async (req, res) => {
     const { name, email, password } = req.body;
+
     const hash = await bcrypt.hash(password, 10);
 
     await db.query(
@@ -136,7 +137,11 @@ app.post("/login", async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Invalid login" });
 
-    const token = jwt.sign({ email: user.email }, JWT_SECRET, { expiresIn: "2h" });
+    const token = jwt.sign(
+        { email: user.email },
+        JWT_SECRET,
+        { expiresIn: "2h" }
+    );
 
     res.json({
         name: user.name,
@@ -146,30 +151,36 @@ app.post("/login", async (req, res) => {
 });
 
 // =========================
-// BOOKING
+// BOOKING (FIXED VALIDATION)
 // =========================
 app.post("/book", async (req, res) => {
     const { name, email, service, bookingDate, bookingTime } = req.body;
 
-    const existing = await db.query(
-        "SELECT * FROM bookings WHERE bookingDate = $1 AND bookingTime = $2",
-        [bookingDate, bookingTime]
-    );
+    try {
+        // ✅ FIX: prevent empty values (THIS WAS YOUR MAIN ISSUE)
+        if (!bookingDate || !bookingTime) {
+            return res.status(400).send("Please select date and time");
+        }
 
-    if (existing.rows.length > 0) {
-        return res.status(400).send("Time slot not available");
-    }
+        const existing = await db.query(
+            "SELECT * FROM bookings WHERE bookingDate = $1 AND bookingTime = $2",
+            [bookingDate, bookingTime]
+        );
 
-    await db.query(
-        "INSERT INTO bookings (name, email, service, bookingDate, bookingTime) VALUES ($1,$2,$3,$4,$5)",
-        [name, email, service, bookingDate, bookingTime]
-    );
+        if (existing.rows.length > 0) {
+            return res.status(400).send("Time slot not available");
+        }
 
-    // EMAILS (UNCHANGED)
-    await sendEmail(
-        email,
-        "Booking Confirmed - GoldWeb Studio",
-        `
+        await db.query(
+            "INSERT INTO bookings (name, email, service, bookingDate, bookingTime) VALUES ($1,$2,$3,$4,$5)",
+            [name, email, service, bookingDate, bookingTime]
+        );
+
+        // EMAILS (UNCHANGED)
+        await sendEmail(
+            email,
+            "Booking Confirmed - GoldWeb Studio",
+            `
 Hello ${name},
 
 Your booking has been confirmed successfully.
@@ -190,13 +201,13 @@ WHAT HAPPENS NEXT
 
 Regards,
 GoldWeb Team
-        `
-    );
+            `
+        );
 
-    await sendEmail(
-        "lufunomuleya23@gmail.com",
-        "📅 New Booking Received",
-        `
+        await sendEmail(
+            "lufunomuleya23@gmail.com",
+            "📅 New Booking Received",
+            `
 New Booking:
 
 Name: ${name}
@@ -204,14 +215,19 @@ Email: ${email}
 Service: ${service}
 Date: ${bookingDate}
 Time: ${bookingTime}
-        `
-    );
+            `
+        );
 
-    res.send("Booking successful");
+        res.send("Booking successful");
+
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).send("Server error");
+    }
 });
 
 // =========================
-// FIXED: GET BOOKING (IMPORTANT FIX)
+// GET BOOKING (FIXED SAFE RESPONSE)
 // =========================
 app.get("/booking/:email", async (req, res) => {
     try {
@@ -223,11 +239,25 @@ app.get("/booking/:email", async (req, res) => {
             [req.params.email]
         );
 
-        res.json(result.rows[0] || null);
+        const row = result.rows[0];
+
+        if (!row) return res.json(null);
+
+        // ✅ FIX: ensure no undefined values reach frontend
+        res.json({
+            id: row.id,
+            name: row.name || "",
+            email: row.email || "",
+            service: row.service || "",
+            bookingDate: row.bookingDate || "",
+            bookingTime: row.bookingTime || "",
+            status: row.status || "pending",
+            adminNotes: row.adminNotes || ""
+        });
 
     } catch (err) {
         console.log(err.message);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json(null);
     }
 });
 
