@@ -64,29 +64,15 @@ body {
     border-radius: 8px;
 }
 
-/* BOOKING UI */
-.booking-card {
-    padding: 12px;
-    border: 1px solid #333;
-    border-radius: 10px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    background: #0f0f14;
-}
-
-.booking-details {
-    display: none;
-    margin-top: 10px;
-}
-
-textarea, select {
+input {
     width: 100%;
-    margin-top: 8px;
-    padding: 8px;
+    padding: 6px;
+    margin-top: 5px;
+    margin-bottom: 5px;
     background: #0b0b0f;
     color: white;
     border: 1px solid #333;
-    border-radius: 6px;
+    border-radius: 5px;
 }
 
 button {
@@ -99,27 +85,20 @@ button {
     font-weight: bold;
     border-radius: 6px;
 }
-
-.status-pending { color: orange; }
-.status-approved { color: limegreen; }
-.status-rejected { color: red; }
-.status-completed { color: skyblue; }
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div class="login-box" id="loginBox">
     <h2 style="color:gold;">Admin Login</h2>
 
     <input id="username" placeholder="Username"><br><br>
     <input id="password" type="password" placeholder="Password"><br><br>
 
-    <button id="loginBtn">Login</button>
+    <button onclick="loginAdmin()">Login</button>
 </div>
 
-<!-- DASHBOARD -->
 <div class="admin-panel" id="adminPanel">
 
     <div class="topbar">
@@ -151,7 +130,7 @@ button {
 
 let token = localStorage.getItem("adminToken");
 
-/* AUTO LOGIN */
+// AUTO LOGIN
 window.onload = function () {
     if (token) {
         document.getElementById("loginBox").style.display = "none";
@@ -160,10 +139,9 @@ window.onload = function () {
     }
 };
 
-/* LOGIN */
-document.getElementById("loginBtn").addEventListener("click", loginAdmin);
-
+// LOGIN
 async function loginAdmin() {
+
     const res = await fetch("https://ce0-2.onrender.com/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -189,83 +167,72 @@ async function loginAdmin() {
     loadData();
 }
 
-/* LOAD ALL */
+// LOAD ALL DATA
 function loadData() {
     loadUsers();
     loadBookings();
     loadMessages();
 }
 
-/* USERS */
+// USERS
 async function loadUsers() {
-    const res = await fetch("https://ce0-2.onrender.com/admin/users");
+    const res = await fetch("https://ce0-2.onrender.com/admin/users", {
+        headers: { Authorization: token }
+    });
+
     const data = await res.json();
 
     document.getElementById("users").innerHTML =
         data.map(u => `
             <div class="item">
-                👤 ${u.name}<br>
-                📧 ${u.email}
+                <b>${u.name}</b><br>
+                ${u.email}
             </div>
         `).join("");
 }
 
-/* BOOKINGS (UPGRADED) */
+// BOOKINGS (FIXED DATE + TIME + EDIT)
 async function loadBookings() {
-    const res = await fetch("https://ce0-2.onrender.com/admin/bookings");
+    const res = await fetch("https://ce0-2.onrender.com/admin/bookings", {
+        headers: { Authorization: token }
+    });
+
     const data = await res.json();
 
     document.getElementById("bookings").innerHTML =
         data.map(b => `
-            <div class="booking-card" onclick="toggle(${b.id})">
-
+            <div class="item">
                 <b>${b.service}</b><br>
-                👤 ${b.name}<br>
-                📧 ${b.email}<br>
-                📅 ${b.bookingDate} ⏰ ${b.bookingTime}<br>
+                ${b.email}<br>
 
-                <span class="status-${b.status}">
-                    Status: ${b.status || "pending"}
-                </span>
+                📅 ${b.bookingDate || "N/A"}  
+                ⏰ ${b.bookingTime || "N/A"}<br>
 
-                <div class="booking-details" id="details-${b.id}">
-                    <hr>
+                Status:
+                <input id="status-${b.id}" value="${b.status || ''}">
 
-                    <label>Status</label>
-                    <select id="status-${b.id}">
-                        <option value="pending">pending</option>
-                        <option value="approved">approved</option>
-                        <option value="rejected">rejected</option>
-                        <option value="completed">completed</option>
-                    </select>
+                Notes:
+                <input id="notes-${b.id}" value="${b.adminNotes || ''}">
 
-                    <label>Admin Notes</label>
-                    <textarea id="notes-${b.id}">${b.adminNotes || ""}</textarea>
-
-                    <button onclick="saveBooking(event, ${b.id})">
-                        Save Changes
-                    </button>
-                </div>
+                <button onclick="updateBooking(${b.id})">
+                    Update
+                </button>
             </div>
         `).join("");
 }
 
-/* TOGGLE DETAILS */
-function toggle(id) {
-    const el = document.getElementById("details-" + id);
-    el.style.display = el.style.display === "block" ? "none" : "block";
-}
+// UPDATE BOOKING (FIXED)
+async function updateBooking(id) {
 
-/* SAVE BOOKING */
-async function saveBooking(event, id) {
-    event.stopPropagation();
-
-    const status = document.getElementById("status-" + id).value;
-    const adminNotes = document.getElementById("notes-" + id).value;
+    const status = document.getElementById(`status-${id}`).value;
+    const adminNotes = document.getElementById(`notes-${id}`).value;
 
     await fetch("https://ce0-2.onrender.com/admin/update-booking", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": token
+        },
         body: JSON.stringify({
             id,
             status,
@@ -273,26 +240,27 @@ async function saveBooking(event, id) {
         })
     });
 
-    alert("Updated!");
     loadBookings();
 }
 
-/* MESSAGES */
+// MESSAGES
 async function loadMessages() {
-    const res = await fetch("https://ce0-2.onrender.com/admin/messages");
+    const res = await fetch("https://ce0-2.onrender.com/admin/messages", {
+        headers: { Authorization: token }
+    });
+
     const data = await res.json();
 
     document.getElementById("messages").innerHTML =
         data.map(m => `
             <div class="item">
-                👤 ${m.name}<br>
-                📧 ${m.email}<br>
-                💬 ${m.message}
+                <b>${m.name}</b><br>
+                ${m.message}
             </div>
         `).join("");
 }
 
-/* LOGOUT */
+// LOGOUT
 function logout() {
     localStorage.removeItem("adminToken");
     location.reload();
