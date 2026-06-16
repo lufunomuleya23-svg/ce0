@@ -18,7 +18,7 @@ const db = new Pool({
 });
 
 // =========================
-// EMAIL FUNCTION
+// EMAIL FUNCTION (UNCHANGED)
 // =========================
 const sendEmail = async (to, subject, text) => {
     try {
@@ -320,7 +320,7 @@ app.get("/admin/messages", async (req, res) => {
 });
 
 // =========================
-// ⭐ UPDATE BOOKING (STATUS + NOTES)
+// UPDATE BOOKING (STATUS + NOTES)
 // =========================
 app.post("/admin/update-booking", async (req, res) => {
     const { id, status, adminNotes } = req.body;
@@ -341,4 +341,3 @@ app.post("/admin/update-booking", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-   
