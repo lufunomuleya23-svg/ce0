@@ -103,6 +103,7 @@ app.use(express.static(__dirname));
 // =========================
 app.post("/register", async (req, res) => {
     const { name, email, password } = req.body;
+
     const hash = await bcrypt.hash(password, 10);
 
     await db.query(
@@ -176,18 +177,22 @@ app.get("/request/:email", async (req, res) => {
 
     const row = result.rows[0];
 
-    res.json(row || {
-        id: null,
-        name: "",
-        email: "",
-        service: "",
-        date: "",
-        time: "",
-        message: "",
-        status: "pending",
-        adminNotes: "",
-        createdAt: null
-    });
+    if (!row) {
+        return res.json({
+            id: null,
+            name: "",
+            email: "",
+            service: "",
+            date: "",
+            time: "",
+            message: "",
+            status: "pending",
+            adminNotes: "",
+            createdAt: null
+        });
+    }
+
+    res.json(row);
 });
 
 // =========================
@@ -245,22 +250,31 @@ app.get("/admin/messages", async (req, res) => {
 });
 
 // =========================
-// ADMIN UPDATE (STATUS + NOTES FIX)
+// ADMIN UPDATE REQUEST (FIXED)
 // =========================
 app.post("/admin/update-request", async (req, res) => {
-    const { id, status, adminNotes } = req.body;
+    try {
+        const { id, status, adminNotes } = req.body;
 
-    await db.query(
-        `UPDATE requests
-         SET status=$1, adminNotes=$2
-         WHERE id=$3`,
-        [status, adminNotes, id]
-    );
+        if (!id) return res.status(400).send("Missing id");
 
-    res.send("updated");
+        await db.query(
+            `UPDATE requests
+             SET status = COALESCE($1, status),
+                 adminNotes = COALESCE($2, adminNotes)
+             WHERE id = $3`,
+            [status, adminNotes, id]
+        );
+
+        res.json({ success: true });
+
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).send("update failed");
+    }
 });
 
 // =========================
-// START
+// START SERVER
 // =========================
-app.listen(PORT, () => console.log("Server running"));
+app.listen(PORT, () => console.log("Server running on port", PORT));
