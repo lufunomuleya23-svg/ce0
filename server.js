@@ -195,9 +195,21 @@ app.post("/book", async (req, res) => {
 app.get("/booking/:email", async (req, res) => {
     try {
         const result = await db.query(
-            "SELECT * FROM bookings WHERE email = $1 ORDER BY id DESC LIMIT 1",
-            [req.params.email]
-        );
+    `SELECT 
+        id,
+        name,
+        email,
+        service,
+        bookingDate AS "bookingDate",
+        bookingTime AS "bookingTime",
+        status,
+        adminNotes
+     FROM bookings 
+     WHERE email = $1 
+     ORDER BY id DESC 
+     LIMIT 1`,
+    [req.params.email]
+);
 
         res.json(result.rows[0] || null);
 
