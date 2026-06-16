@@ -1,150 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>User Dashboard</title>
-
 <style>
-body {
-    margin: 0;
-    font-family: Arial;
-    background: #0b0b0f;
-    color: white;
-}
-
-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 15px 25px;
-    background: #000;
-    border-bottom: 1px solid gold;
-}
-
-.logo {
-    color: gold;
-    font-weight: bold;
-}
-
-.container {
-    max-width: 1000px;
-    margin: auto;
-    padding: 20px;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-.card {
-    background: #111;
-    padding: 20px;
-    border-radius: 10px;
-    border: 1px solid #222;
-}
-
-h2 {
-    color: gold;
-}
-
-input, select, textarea {
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-    background: #0b0b0f;
-    border: 1px solid #333;
-    color: white;
-    border-radius: 6px;
-}
-
-textarea {
-    height: 100px;
-}
-
-button {
-    width: 100%;
-    margin-top: 15px;
-    padding: 10px;
-    background: gold;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
-    border-radius: 6px;
-}
-
-.box {
-    margin-top: 10px;
-    padding: 10px;
-    border: 1px solid #222;
-    border-radius: 6px;
-    background: #0b0b0f;
-}
+body{background:#0b0b0f;color:white;font-family:Arial}
+.container{max-width:800px;margin:auto;padding:20px}
+.card{background:#111;padding:15px;margin-top:10px;border-radius:10px}
+button{background:gold;width:100%;padding:10px;border:none;margin-top:10px}
+input,select,textarea{width:100%;padding:10px;margin-top:5px}
 </style>
 </head>
 
 <body>
 
-<header>
-    <div class="logo">GoldWeb Dashboard</div>
-    <a href="#" onclick="logout()" style="color:white;">Logout</a>
-</header>
-
 <div class="container">
 
-    <h2 id="welcome"></h2>
+<h2>Send Request</h2>
 
-    <div class="grid">
+<select id="service">
+<option>Web Dev</option>
+<option>Consultation</option>
+</select>
 
-        <!-- REQUEST FORM -->
-        <div class="card">
-            <h2>Send Request</h2>
+<input type="date" id="date">
+<select id="time">
+<option>09:00</option><option>10:00</option>
+<option>11:00</option><option>12:00</option>
+</select>
 
-            <select id="service">
-                <option>Web Development</option>
-                <option>Consultation</option>
-            </select>
+<textarea id="message"></textarea>
 
-            <input type="date" id="date">
+<button onclick="send()">Send</button>
 
-            <select id="time">
-                <option>09:00</option>
-                <option>10:00</option>
-                <option>11:00</option>
-                <option>12:00</option>
-                <option>13:00</option>
-                <option>14:00</option>
-                <option>15:00</option>
-                <option>16:00</option>
-                <option>17:00</option>
-            </select>
+<h2>My Request</h2>
+<div id="box">Loading...</div>
 
-            <textarea id="message" placeholder="Your message"></textarea>
-
-            <button onclick="sendRequest()">Send Request</button>
-            <p id="status"></p>
-        </div>
-
-        <!-- REQUEST DISPLAY -->
-        <div class="card">
-            <h2>My Request</h2>
-            <div id="requestBox">Loading...</div>
-        </div>
-
-        <!-- ACCOUNT -->
-        <div class="card">
-            <h2>Account</h2>
-
-            <div class="box">
-                <b id="nameBox"></b><br>
-                <span id="emailBox"></span>
-            </div>
-
-            <button style="background:red;" onclick="logout()">Logout</button>
-        </div>
-
-    </div>
 </div>
 
 <script>
@@ -152,87 +42,53 @@ button {
 const email = localStorage.getItem("userEmail");
 const name = localStorage.getItem("userName");
 
-if (!email) {
-    window.location.href = "login.html";
+load();
+
+async function send(){
+
+await fetch("/request",{
+method:"POST",
+headers:{ "Content-Type":"application/json" },
+body:JSON.stringify({
+name,email,
+service:service.value,
+date:date.value,
+time:time.value,
+message:message.value
+})
+});
+
+load();
 }
 
-document.getElementById("welcome").innerText = "Welcome " + name;
-document.getElementById("nameBox").innerText = name;
-document.getElementById("emailBox").innerText = email;
+async function load(){
 
-loadRequest();
+const res = await fetch("/request/"+email);
+const d = await res.json();
 
-/* ================= SEND REQUEST ================= */
-async function sendRequest() {
-
-    const res = await fetch("https://ce0-2.onrender.com/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            name,
-            email,
-            service: document.getElementById("service").value,
-            date: document.getElementById("date").value,
-            time: document.getElementById("time").value,
-            message: document.getElementById("message").value
-        })
-    });
-
-    document.getElementById("status").innerText = await res.text();
-    loadRequest();
+if(!d){
+box.innerHTML="No request";
+return;
 }
 
-/* ================= LOAD REQUEST ================= */
-async function loadRequest() {
+box.innerHTML=`
+<div class="card">
+${d.service}<br>
+${d.message}<br>
+Status: ${d.status}<br>
+Notes: ${d.adminNotes}<br>
 
-    try {
-        const res = await fetch(`https://ce0-2.onrender.com/request/${email}`);
-        const data = await res.json();
+<button onclick="del(${d.id})" style="background:red">
+Delete
+</button>
 
-        const box = document.getElementById("requestBox");
-
-        if (!data || !data.id) {
-            box.innerHTML = "No request yet";
-            return;
-        }
-
-        box.innerHTML = `
-            <div class="box">
-                <b>${data.service || "No service"}</b><br>
-                📅 ${data.date || "No date selected"}<br>
-                ⏰ ${data.time || "No time selected"}<br>
-                📝 ${data.message || ""}<br>
-                📌 Status: ${data.status || "pending"}<br>
-                🗒 Admin Notes: ${data.adminNotes || "None yet"}
-
-                <button style="background:red; margin-top:10px;" onclick="deleteRequest(${data.id})">
-                    Delete Request
-                </button>
-            </div>
-        `;
-
-    } catch (err) {
-        console.log(err);
-        document.getElementById("requestBox").innerHTML =
-            "Failed to load request";
-    }
+</div>
+`;
 }
 
-/* ================= DELETE REQUEST ================= */
-async function deleteRequest(id) {
-
-    const res = await fetch(`https://ce0-2.onrender.com/request/${id}`, {
-        method: "DELETE"
-    });
-
-    document.getElementById("status").innerText = await res.text();
-    loadRequest();
-}
-
-/* ================= LOGOUT ================= */
-function logout() {
-    localStorage.clear();
-    window.location.href = "login.html";
+async function del(id){
+await fetch("/request/"+id,{method:"DELETE"});
+load();
 }
 
 </script>
