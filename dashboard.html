@@ -16,7 +16,6 @@ body {
 header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     padding: 15px 25px;
     background: #000;
     border-bottom: 1px solid gold;
@@ -27,20 +26,10 @@ header {
     font-weight: bold;
 }
 
-nav a {
-    color: white;
-    margin-left: 15px;
-    text-decoration: none;
-}
-
 .container {
-    max-width: 1100px;
+    max-width: 1000px;
     margin: auto;
-    padding: 25px;
-}
-
-h1 {
-    color: gold;
+    padding: 20px;
 }
 
 .grid {
@@ -52,13 +41,12 @@ h1 {
 .card {
     background: #111;
     padding: 20px;
-    border-radius: 12px;
+    border-radius: 10px;
     border: 1px solid #222;
 }
 
-.card h3 {
+h2 {
     color: gold;
-    margin-bottom: 15px;
 }
 
 input, select, textarea {
@@ -73,7 +61,6 @@ input, select, textarea {
 
 textarea {
     height: 100px;
-    resize: none;
 }
 
 button {
@@ -87,114 +74,70 @@ button {
     border-radius: 6px;
 }
 
-button:hover {
-    background: #d4af37;
-}
-
 .box {
-    padding: 10px;
     margin-top: 10px;
-    background: #0b0b0f;
+    padding: 10px;
     border: 1px solid #222;
     border-radius: 6px;
-}
-
-@media(max-width: 768px) {
-    .grid {
-        grid-template-columns: 1fr;
-    }
+    background: #0b0b0f;
 }
 </style>
-
 </head>
 
 <body>
 
 <header>
     <div class="logo">GoldWeb Dashboard</div>
-    <nav>
-        <a href="index.html">Home</a>
-        <a href="#" onclick="logout()">Logout</a>
-    </nav>
+    <a href="#" onclick="logout()" style="color:white;">Logout</a>
 </header>
 
 <div class="container">
 
-    <h1 id="welcome"></h1>
-    <p id="email"></p>
+    <h2 id="welcome"></h2>
 
     <div class="grid">
 
-        <!-- BOOKING -->
+        <!-- REQUEST FORM -->
         <div class="card">
-            <h3>Book Service</h3>
+            <h2>Send Request</h2>
 
             <select id="service">
                 <option>Web Development</option>
-                <option>Zoom Consultation</option>
+                <option>Consultation</option>
             </select>
 
             <input type="date" id="date">
+            <input type="time" id="time">
 
-            <select id="bookingTime">
-                <option value="09:00">09:00</option>
-                <option value="10:00">10:00</option>
-                <option value="11:00">11:00</option>
-                <option value="12:00">12:00</option>
-                <option value="13:00">13:00</option>
-                <option value="14:00">14:00</option>
-                <option value="15:00">15:00</option>
-                <option value="16:00">16:00</option>
-                <option value="17:00">17:00</option>
-                <option value="18:00">18:00</option>
-            </select>
+            <textarea id="message" placeholder="Your message"></textarea>
 
-            <button onclick="book()">Book Now</button>
-            <p id="bookStatus"></p>
+            <button onclick="sendRequest()">Send Request</button>
+
+            <p id="status"></p>
         </div>
 
-        <!-- BOOKING DISPLAY -->
+        <!-- REQUEST DISPLAY -->
         <div class="card">
-            <h3>My Booking</h3>
-            <div id="bookingBox">Loading...</div>
-        </div>
-
-        <!-- MESSAGE -->
-        <div class="card">
-            <h3>Contact Support</h3>
-
-            <input id="msgName" placeholder="Your Name">
-            <input id="msgEmail" placeholder="Your Email">
-            <textarea id="msgText" placeholder="Your Message"></textarea>
-
-            <button onclick="sendMessage()">Send Message</button>
-            <p id="msgStatus"></p>
+            <h2>My Request</h2>
+            <div id="requestBox">Loading...</div>
         </div>
 
         <!-- ACCOUNT -->
         <div class="card">
-            <h3>Account Info</h3>
+            <h2>Account</h2>
 
             <div class="box">
-                Logged in as:<br>
-                <b id="infoName"></b><br>
-                <span id="infoEmail"></span>
+                <b id="nameBox"></b><br>
+                <span id="emailBox"></span>
             </div>
 
             <button style="background:red;" onclick="logout()">Logout</button>
-
-            <button style="background:red;" onclick="deleteAccount()">
-                Delete My Account
-            </button>
-
-            <p id="deleteStatus"></p>
         </div>
 
     </div>
 </div>
 
 <script>
-
 const email = localStorage.getItem("userEmail");
 const name = localStorage.getItem("userName");
 
@@ -202,91 +145,59 @@ if (!email) {
     window.location.href = "login.html";
 }
 
-document.getElementById("welcome").innerText = "Welcome back, " + (name || "");
-document.getElementById("email").innerText = email;
-document.getElementById("infoName").innerText = name || "";
-document.getElementById("infoEmail").innerText = email;
+document.getElementById("welcome").innerText = "Welcome " + name;
+document.getElementById("nameBox").innerText = name;
+document.getElementById("emailBox").innerText = email;
 
-loadBooking();
+loadRequest();
 
-/* ================= BOOK ================= */
-async function book() {
+/* ================= SEND REQUEST ================= */
+async function sendRequest() {
 
-    const res = await fetch("https://ce0-2.onrender.com/book", {
+    const res = await fetch("https://ce0-2.onrender.com/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             name,
             email,
             service: document.getElementById("service").value,
-            bookingDate: document.getElementById("date").value,
-            bookingTime: document.getElementById("bookingTime").value
+            date: document.getElementById("date").value,
+            time: document.getElementById("time").value,
+            message: document.getElementById("message").value
         })
     });
 
-    document.getElementById("bookStatus").innerText = await res.text();
-    loadBooking();
+    document.getElementById("status").innerText = await res.text();
+
+    loadRequest();
 }
 
-/* ================= LOAD BOOKING ================= */
-async function loadBooking() {
+/* ================= LOAD REQUEST ================= */
+async function loadRequest() {
 
     try {
-        const res = await fetch(`https://ce0-2.onrender.com/booking/${email}`);
+        const res = await fetch(`https://ce0-2.onrender.com/request/${email}`);
         const data = await res.json();
 
-        const box = document.getElementById("bookingBox");
+        const box = document.getElementById("requestBox");
 
-        if (!data || !data.id) {
-            box.innerHTML = "No booking yet.";
+        if (!data) {
+            box.innerHTML = "No request yet";
             return;
         }
 
         box.innerHTML = `
             <div class="box">
-                <b>${data.service || "No service"}</b><br>
-                📅 ${data.bookingDate || "Not set"}<br>
-                ⏰ ${data.bookingTime || "Not set"}<br>
-                📌 ${data.status || "pending"}<br>
-                📝 ${data.adminNotes || "No notes yet"}
+                <b>${data.service || ""}</b><br>
+                📅 ${data.date || ""}<br>
+                ⏰ ${data.time || ""}<br>
+                📝 ${data.message || ""}
             </div>
         `;
 
     } catch (err) {
-        console.log(err);
-        document.getElementById("bookingBox").innerHTML =
-            "Failed to load booking.";
-    }
-}
-
-/* ================= MESSAGE ================= */
-async function sendMessage() {
-
-    const res = await fetch("https://ce0-2.onrender.com/message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            name: document.getElementById("msgName").value,
-            email: document.getElementById("msgEmail").value,
-            message: document.getElementById("msgText").value
-        })
-    });
-
-    document.getElementById("msgStatus").innerText = await res.text();
-}
-
-/* ================= DELETE ================= */
-async function deleteAccount() {
-
-    const res = await fetch(`https://ce0-2.onrender.com/delete-account/${email}`, {
-        method: "DELETE"
-    });
-
-    document.getElementById("deleteStatus").innerText = await res.text();
-
-    if (res.ok) {
-        localStorage.clear();
-        window.location.href = "login.html";
+        document.getElementById("requestBox").innerHTML =
+            "Failed to load request";
     }
 }
 
@@ -295,7 +206,6 @@ function logout() {
     localStorage.clear();
     window.location.href = "login.html";
 }
-
 </script>
 
 </body>
