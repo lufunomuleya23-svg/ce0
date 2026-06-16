@@ -18,7 +18,7 @@ const db = new Pool({
 });
 
 // =========================
-// EMAIL FUNCTION
+// EMAIL FUNCTION (UNCHANGED - FULL VERSION RESTORED)
 // =========================
 const sendEmail = async (to, subject, text) => {
     try {
@@ -175,41 +175,76 @@ app.post("/book", async (req, res) => {
     );
 
     await sendEmail(
-        email,
-        "Booking Confirmed",
-        `Service: ${service}\nDate: ${bookingDate}\nTime: ${bookingTime}`
-    );
+    email,
+    "Booking Confirmed - GoldWeb Studio",
+    `
+Hello ${name},
 
-    await sendEmail(
-        "lufunomuleya23@gmail.com",
-        "New Booking",
-        `${name} booked ${service}`
-    );
+Your booking has been confirmed successfully.
 
-    res.send("Booking successful");
-});
+----------------------------------
+BOOKING DETAILS
+----------------------------------
+Service: ${service}
+Date: ${bookingDate}
+Time: ${bookingTime}
+----------------------------------
+
+WHAT HAPPENS NEXT
+----------------------------------
+• We will review your booking
+• You will receive a Zoom/meeting link before the session
+• Please be available at the selected time
+
+If you do not see this email, check your spam/junk folder.
+
+Thank you for choosing GoldWeb Studio.
+
+Regards,
+GoldWeb Team
+    `
+);
+
+await sendEmail(
+    "lufunomuleya23@gmail.com",
+    "📅 New Booking Received",
+    `
+New Booking Alert:
+
+Name: ${name}
+Email: ${email}
+Service: ${service}
+Date: ${bookingDate}
+Time: ${bookingTime}
+
+----------------------------------
+ACTION REQUIRED
+----------------------------------
+Please review this booking in the admin dashboard.
+    `
+);
 
 // =========================
-// ⭐ FIXED: GET BOOKING (THIS FIXES YOUR LOADING ISSUE)
+// ⭐ FIXED: GET BOOKING
 // =========================
 app.get("/booking/:email", async (req, res) => {
     try {
         const result = await db.query(
-    `SELECT 
-        id,
-        name,
-        email,
-        service,
-        bookingDate AS "bookingDate",
-        bookingTime AS "bookingTime",
-        status,
-        adminNotes
-     FROM bookings 
-     WHERE email = $1 
-     ORDER BY id DESC 
-     LIMIT 1`,
-    [req.params.email]
-);
+            `SELECT 
+                id,
+                name,
+                email,
+                service,
+                bookingDate AS "bookingDate",
+                bookingTime AS "bookingTime",
+                status,
+                adminNotes
+             FROM bookings 
+             WHERE email = $1 
+             ORDER BY id DESC 
+             LIMIT 1`,
+            [req.params.email]
+        );
 
         res.json(result.rows[0] || null);
 
@@ -264,6 +299,46 @@ app.post("/admin/login", async (req, res) => {
     );
 
     res.json({ token });
+});
+
+// =========================
+// ⭐ ADMIN FIX (MISSING ROUTES ADDED)
+// =========================
+
+// USERS
+app.get("/admin/users", async (req, res) => {
+    try {
+        const result = await db.query(
+            "SELECT id, name, email FROM users ORDER BY id DESC"
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json([]);
+    }
+});
+
+// BOOKINGS
+app.get("/admin/bookings", async (req, res) => {
+    try {
+        const result = await db.query(
+            "SELECT * FROM bookings ORDER BY id DESC"
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json([]);
+    }
+});
+
+// MESSAGES
+app.get("/admin/messages", async (req, res) => {
+    try {
+        const result = await db.query(
+            "SELECT * FROM messages ORDER BY id DESC"
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json([]);
+    }
 });
 
 // =========================
