@@ -128,7 +128,11 @@ app.post("/login", async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "invalid" });
 
-    const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "2h" });
+    const token = jwt.sign(
+        { email },
+        JWT_SECRET,
+        { expiresIn: "2h" }
+    );
 
     res.json({
         name: user.name,
@@ -139,7 +143,7 @@ app.post("/login", async (req, res) => {
 });
 
 // =========================
-// USER REQUEST
+// REQUEST
 // =========================
 app.post("/request", async (req, res) => {
     const { name, email, service, date, time, message } = req.body;
@@ -180,7 +184,7 @@ app.get("/request/:email", async (req, res) => {
 });
 
 // =========================
-// DELETE USER ACCOUNT (FIXED)
+// DELETE USER ACCOUNT
 // =========================
 app.delete("/user/:email", async (req, res) => {
     const email = req.params.email;
@@ -192,11 +196,19 @@ app.delete("/user/:email", async (req, res) => {
 });
 
 // =========================
-// DELETE REQUEST (FIXED)
+// DELETE REQUEST (ADMIN FIXED)
 // =========================
-app.delete("/request/:id", async (req, res) => {
-    await db.query("DELETE FROM requests WHERE id=$1", [req.params.id]);
-    res.send("Request deleted");
+app.delete("/admin/request/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await db.query("DELETE FROM requests WHERE id=$1", [id]);
+
+        res.send("Request deleted");
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).send("Delete failed");
+    }
 });
 
 // =========================
@@ -230,7 +242,11 @@ app.post("/admin/login", async (req, res) => {
     const match = await bcrypt.compare(password, admin.password);
     if (!match) return res.status(401).json({ message: "invalid" });
 
-    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: "2h" });
+    const token = jwt.sign(
+        { username },
+        JWT_SECRET,
+        { expiresIn: "2h" }
+    );
 
     res.json({ token });
 });
@@ -254,20 +270,28 @@ app.get("/admin/messages", async (req, res) => {
 });
 
 // =========================
-// UPDATE REQUEST (FIXED)
+// UPDATE REQUEST (FIXED SAFE)
 // =========================
 app.post("/admin/update-request", async (req, res) => {
-    const { id, status, adminNotes } = req.body;
+    try {
+        const { id, status, adminNotes } = req.body;
 
-    await db.query(
-        `UPDATE requests
-         SET status=$1,
-             adminNotes=$2
-         WHERE id=$3`,
-        [status, adminNotes, id]
-    );
+        if (!id) return res.status(400).send("Missing id");
 
-    res.send("updated");
+        await db.query(
+            `UPDATE requests
+             SET status = COALESCE($1, status),
+                 adminNotes = COALESCE($2, adminNotes)
+             WHERE id=$3`,
+            [status, adminNotes, id]
+        );
+
+        res.json({ success: true });
+
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).send("update failed");
+    }
 });
 
 // =========================
