@@ -107,22 +107,22 @@ button {
             </select>
 
             <input type="date" id="date">
+
             <select id="time">
-  <option>09:00</option>
-  <option>10:00</option>
-  <option>11:00</option>
-  <option>12:00</option>
-  <option>13:00</option>
-  <option>14:00</option>
-  <option>15:00</option>
-  <option>16:00</option>
-  <option>17:00</option>
-</select>
+                <option>09:00</option>
+                <option>10:00</option>
+                <option>11:00</option>
+                <option>12:00</option>
+                <option>13:00</option>
+                <option>14:00</option>
+                <option>15:00</option>
+                <option>16:00</option>
+                <option>17:00</option>
+            </select>
 
             <textarea id="message" placeholder="Your message"></textarea>
 
             <button onclick="sendRequest()">Send Request</button>
-
             <p id="status"></p>
         </div>
 
@@ -148,6 +148,7 @@ button {
 </div>
 
 <script>
+
 const email = localStorage.getItem("userEmail");
 const name = localStorage.getItem("userName");
 
@@ -178,7 +179,6 @@ async function sendRequest() {
     });
 
     document.getElementById("status").innerText = await res.text();
-
     loadRequest();
 }
 
@@ -191,24 +191,42 @@ async function loadRequest() {
 
         const box = document.getElementById("requestBox");
 
-        if (!data) {
+        if (!data || !data.id) {
             box.innerHTML = "No request yet";
             return;
         }
 
         box.innerHTML = `
             <div class="box">
-                <b>${data.service || ""}</b><br>
-                📅 ${data.date || ""}<br>
-                ⏰ ${data.time || ""}<br>
-                📝 ${data.message || ""}
+                <b>${data.service || "No service"}</b><br>
+                📅 ${data.date || "No date selected"}<br>
+                ⏰ ${data.time || "No time selected"}<br>
+                📝 ${data.message || ""}<br>
+                📌 Status: ${data.status || "pending"}<br>
+                🗒 Admin Notes: ${data.adminNotes || "None yet"}
+
+                <button style="background:red; margin-top:10px;" onclick="deleteRequest(${data.id})">
+                    Delete Request
+                </button>
             </div>
         `;
 
     } catch (err) {
+        console.log(err);
         document.getElementById("requestBox").innerHTML =
             "Failed to load request";
     }
+}
+
+/* ================= DELETE REQUEST ================= */
+async function deleteRequest(id) {
+
+    const res = await fetch(`https://ce0-2.onrender.com/request/${id}`, {
+        method: "DELETE"
+    });
+
+    document.getElementById("status").innerText = await res.text();
+    loadRequest();
 }
 
 /* ================= LOGOUT ================= */
@@ -216,6 +234,7 @@ function logout() {
     localStorage.clear();
     window.location.href = "login.html";
 }
+
 </script>
 
 </body>
