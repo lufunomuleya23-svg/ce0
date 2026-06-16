@@ -18,7 +18,7 @@ const db = new Pool({
 });
 
 // =========================
-// EMAIL FUNCTION (UNCHANGED - FULL VERSION RESTORED)
+// EMAIL FUNCTION
 // =========================
 const sendEmail = async (to, subject, text) => {
     try {
@@ -57,7 +57,7 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // =========================
-// INIT DATABASE TABLES
+// INIT DB
 // =========================
 const initDB = async () => {
     await db.query(`
@@ -160,24 +160,25 @@ app.post("/login", async (req, res) => {
 app.post("/book", async (req, res) => {
     const { name, email, service, bookingDate, bookingTime } = req.body;
 
-    const existing = await db.query(
-        "SELECT * FROM bookings WHERE bookingDate = $1 AND bookingTime = $2",
-        [bookingDate, bookingTime]
-    );
+    try {
+        const existing = await db.query(
+            "SELECT * FROM bookings WHERE bookingDate = $1 AND bookingTime = $2",
+            [bookingDate, bookingTime]
+        );
 
-    if (existing.rows.length > 0) {
-        return res.status(400).send("Time slot not available");
-    }
+        if (existing.rows.length > 0) {
+            return res.status(400).send("Time slot not available");
+        }
 
-    await db.query(
-        "INSERT INTO bookings (name, email, service, bookingDate, bookingTime) VALUES ($1,$2,$3,$4,$5)",
-        [name, email, service, bookingDate, bookingTime]
-    );
+        await db.query(
+            "INSERT INTO bookings (name, email, service, bookingDate, bookingTime) VALUES ($1,$2,$3,$4,$5)",
+            [name, email, service, bookingDate, bookingTime]
+        );
 
-    await sendEmail(
-    email,
-    "Booking Confirmed - GoldWeb Studio",
-    `
+        await sendEmail(
+            email,
+            "Booking Confirmed - GoldWeb Studio",
+            `
 Hello ${name},
 
 Your booking has been confirmed successfully.
@@ -196,66 +197,55 @@ WHAT HAPPENS NEXT
 • You will receive a Zoom/meeting link before the session
 • Please be available at the selected time
 
-If you do not see this email, check your spam/junk folder.
-
-Thank you for choosing GoldWeb Studio.
-
 Regards,
 GoldWeb Team
-    `
-);
+            `
+        );
 
-await sendEmail(
-    "lufunomuleya23@gmail.com",
-    "📅 New Booking Received",
-    `
-New Booking Alert:
+        await sendEmail(
+            "lufunomuleya23@gmail.com",
+            "📅 New Booking Received",
+            `
+New Booking:
 
 Name: ${name}
 Email: ${email}
 Service: ${service}
 Date: ${bookingDate}
 Time: ${bookingTime}
+            `
+        );
 
-----------------------------------
-ACTION REQUIRED
-----------------------------------
-Please review this booking in the admin dashboard.
-    `
-);
+        res.send("Booking successful");
+
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).send("Server error");
+    }
+});
 
 // =========================
-// ⭐ FIXED: GET BOOKING
+// GET USER BOOKING
 // =========================
 app.get("/booking/:email", async (req, res) => {
     try {
         const result = await db.query(
-            `SELECT 
-                id,
-                name,
-                email,
-                service,
-                bookingDate AS "bookingDate",
-                bookingTime AS "bookingTime",
-                status,
-                adminNotes
-             FROM bookings 
-             WHERE email = $1 
-             ORDER BY id DESC 
+            `SELECT * FROM bookings
+             WHERE email = $1
+             ORDER BY id DESC
              LIMIT 1`,
             [req.params.email]
         );
 
         res.json(result.rows[0] || null);
 
-    } catch (err) {
-        console.log("Booking error:", err.message);
+    } catch {
         res.status(500).json({ message: "Server error" });
     }
 });
 
 // =========================
-// MESSAGES
+// MESSAGE
 // =========================
 app.post("/message", async (req, res) => {
     const { name, email, message } = req.body;
@@ -302,43 +292,47 @@ app.post("/admin/login", async (req, res) => {
 });
 
 // =========================
-// ⭐ ADMIN FIX (MISSING ROUTES ADDED)
+// ADMIN ROUTES
 // =========================
 
 // USERS
 app.get("/admin/users", async (req, res) => {
-    try {
-        const result = await db.query(
-            "SELECT id, name, email FROM users ORDER BY id DESC"
-        );
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json([]);
-    }
+    const result = await db.query(
+        "SELECT id, name, email FROM users ORDER BY id DESC"
+    );
+    res.json(result.rows);
 });
 
 // BOOKINGS
 app.get("/admin/bookings", async (req, res) => {
-    try {
-        const result = await db.query(
-            "SELECT * FROM bookings ORDER BY id DESC"
-        );
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json([]);
-    }
+    const result = await db.query(
+        "SELECT * FROM bookings ORDER BY id DESC"
+    );
+    res.json(result.rows);
 });
 
 // MESSAGES
 app.get("/admin/messages", async (req, res) => {
-    try {
-        const result = await db.query(
-            "SELECT * FROM messages ORDER BY id DESC"
-        );
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json([]);
-    }
+    const result = await db.query(
+        "SELECT * FROM messages ORDER BY id DESC"
+    );
+    res.json(result.rows);
+});
+
+// =========================
+// ⭐ UPDATE BOOKING (STATUS + NOTES)
+// =========================
+app.post("/admin/update-booking", async (req, res) => {
+    const { id, status, adminNotes } = req.body;
+
+    await db.query(
+        `UPDATE bookings 
+         SET status = $1, adminNotes = $2 
+         WHERE id = $3`,
+        [status, adminNotes, id]
+    );
+
+    res.send("Booking updated");
 });
 
 // =========================
@@ -347,3 +341,4 @@ app.get("/admin/messages", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+   
