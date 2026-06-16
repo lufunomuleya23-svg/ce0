@@ -141,7 +141,6 @@ window.onload = function () {
 
 // LOGIN
 async function loginAdmin() {
-
     const res = await fetch("https://ce0-2.onrender.com/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -167,7 +166,7 @@ async function loginAdmin() {
     loadData();
 }
 
-// LOAD ALL DATA
+// LOAD ALL
 function loadData() {
     loadUsers();
     loadBookings();
@@ -183,15 +182,15 @@ async function loadUsers() {
     const data = await res.json();
 
     document.getElementById("users").innerHTML =
-        data.map(u => `
+        (data || []).map(u => `
             <div class="item">
-                <b>${u.name}</b><br>
-                ${u.email}
+                <b>${u.name || "N/A"}</b><br>
+                ${u.email || "N/A"}
             </div>
         `).join("");
 }
 
-// BOOKINGS (FIXED DATE + TIME + EDIT)
+// BOOKINGS
 async function loadBookings() {
     const res = await fetch("https://ce0-2.onrender.com/admin/bookings", {
         headers: { Authorization: token }
@@ -200,16 +199,16 @@ async function loadBookings() {
     const data = await res.json();
 
     document.getElementById("bookings").innerHTML =
-        data.map(b => `
+        (data || []).map(b => `
             <div class="item">
-                <b>${b.service}</b><br>
-                ${b.email}<br>
+                <b>${b.service || "N/A"}</b><br>
+                ${b.email || "N/A"}<br>
 
                 📅 ${b.bookingDate || "N/A"}  
                 ⏰ ${b.bookingTime || "N/A"}<br>
 
                 Status:
-                <input id="status-${b.id}" value="${b.status || ''}">
+                <input id="status-${b.id}" value="${b.status || 'pending'}">
 
                 Notes:
                 <input id="notes-${b.id}" value="${b.adminNotes || ''}">
@@ -221,7 +220,7 @@ async function loadBookings() {
         `).join("");
 }
 
-// UPDATE BOOKING (FIXED)
+// UPDATE BOOKING
 async function updateBooking(id) {
 
     const status = document.getElementById(`status-${id}`).value;
@@ -240,7 +239,7 @@ async function updateBooking(id) {
         })
     });
 
-    loadBookings();
+    loadBookings(); // refresh UI
 }
 
 // MESSAGES
@@ -252,10 +251,10 @@ async function loadMessages() {
     const data = await res.json();
 
     document.getElementById("messages").innerHTML =
-        data.map(m => `
+        (data || []).map(m => `
             <div class="item">
-                <b>${m.name}</b><br>
-                ${m.message}
+                <b>${m.name || "N/A"}</b><br>
+                ${m.message || ""}
             </div>
         `).join("");
 }
